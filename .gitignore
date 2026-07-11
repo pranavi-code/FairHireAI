@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Node/frontend
+node_modules/
+dist/
+build/
+.next/
+.vite/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Private or large project data
+datasets/raw/
+datasets/private/
+datasets/videos/
+datasets/features/
+uploads/
+storage/
+media/
+private_resumes/
+resumes/private/
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.wav
+*.mp3
+
+# ML artifacts
+checkpoints/
+models/
+runs/
+wandb/
+mlruns/
+
+# Local OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

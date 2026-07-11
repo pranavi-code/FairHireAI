@@ -1,0 +1,12 @@
+source_id,title,url,license,accessed_date,used_for,citation_key,notes
+SRC-001,MAG-BERT-ARL base paper,,To verify,2026-07-11,Base model architecture and experiments,mag_bert_arl_2024,Provided project paper/PDF; verify bibliographic fields before final citation
+SRC-002,Integrating Multimodal Information in Large Pretrained Transformers,https://github.com/WasifurRahman/BERT_multimodal_transformer,To verify,2026-07-11,MAG mechanism and implementation reference,mag_transformer,Verify paper and repository citation
+SRC-003,Fairness Without Demographics Through Adversarially Reweighted Learning,https://proceedings.neurips.cc/paper/2020/hash/07fc15c9d169ee48573edd749d25945d-Abstract.html,To verify,2026-07-11,ARL learner/adversary method,arl_2020,Use for fairness framing and ARL objective
+SRC-004,First Impressions V2 dataset,https://chalearnlap.cvc.uab.cat/dataset/24/description/,To verify,2026-07-11,Base-model reproduction dataset,first_impressions_v2,Use only for available interview-score label and offline audit
+SRC-005,Whisper,https://github.com/openai/whisper,MIT,2026-07-11,Speech transcription,whisper,Verify exact version used in experiments
+SRC-006,whisper-timestamped,https://github.com/linto-ai/whisper-timestamped,To verify,2026-07-11,Word timestamps and confidence,whisper_timestamped,Requires ffmpeg; cite with Whisper
+SRC-007,openSMILE Python,https://github.com/audeering/opensmile-python,To verify,2026-07-11,eGeMAPS acoustic features,opensmile_python,Verify version and eGeMAPS configuration
+SRC-008,OpenFace 2.0,https://github.com/TadasBaltrusaitis/OpenFace,To verify,2026-07-11,Visual feature extraction,openface_2,Time-box installation in week 1
+SRC-009,Captum,https://captum.ai/,To verify,2026-07-11,Gradient SHAP explainability,captum,Record exact package version
+SRC-010,O*NET license and data,https://www.onetcenter.org/license_agreements.html,To verify,2026-07-11,Role/competency taxonomy seed,onet,Follow attribution and license conditions
+SRC-011,ESCO API and downloadable classification,https://esco.ec.europa.eu/en/use-esco/use-esco-services-api,To verify,2026-07-11,Alternative role/skill taxonomy seed,esco,Use for career guidance taxonomy only
