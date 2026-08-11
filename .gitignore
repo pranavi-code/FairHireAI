@@ -4,16 +4,31 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.hypothesis/
+.ipynb_checkpoints/
 .venv/
+.venv*/
 venv/
+venv*/
 env/
+*.egg-info/
 
 # Node/frontend
 node_modules/
+.pnpm-store/
+.tmp-frontend/
 dist/
 build/
 .next/
 .vite/
+frontend/.output/
+frontend/.output-verify-*/
+frontend/.wrangler/
+*.tsbuildinfo
 
 # Environment and secrets
 .env
@@ -21,6 +36,8 @@ build/
 !.env.example
 *.key
 *.pem
+*.pfx
+*.p12
 
 # Private or large project data
 datasets/raw/
@@ -38,6 +55,9 @@ resumes/private/
 *.mkv
 *.wav
 *.mp3
+*.parquet
+*.arrow
+*.npy
 
 # ML artifacts
 checkpoints/
@@ -45,9 +65,23 @@ models/
 runs/
 wandb/
 mlruns/
+.matplotlib-cache/
+outputs/runtime/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
 
 # Local OS/editor files
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+.codex/
+.agents/
+*.log
+*.pid
+*.tmp
+tmp/
+temp/

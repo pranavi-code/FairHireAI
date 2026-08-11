@@ -1,0 +1,30 @@
+{
+  "approved_resource_count": 17,
+  "missing_source_ids": [],
+  "next_gate": "Publish the validated artifacts to Supabase after live migration approval.",
+  "question_draft_count": 36,
+  "question_draft_status": "pending_automatic_validation",
+  "question_drafts_by_role": {
+    "junior_backend_developer": 6,
+    "junior_data_analyst": 6,
+    "junior_devops_cloud_engineer": 6,
+    "junior_frontend_developer": 6,
+    "junior_full_stack_developer": 6,
+    "junior_machine_learning_engineer": 6
+  },
+  "retrieval_enabled_source_count": 9,
+  "reviewed_document_count": 14,
+  "role_count": 6,
+  "safety_checks": {
+    "resource_urls_cannot_be_invented": true,
+    "rubrics_have_exactly_levels_1_to_5": true,
+    "ungrounded_questions_hidden_by_rls": true,
+    "unlicensed_open_content_rejected": true,
+    "unreviewed_sources_hidden_by_rls": true
+  },
+  "schema_version": "knowledge-validation-v1",
+  "source_count": 10,
+  "validated_question_count": 36,
+  "validated_question_status": "generated_validated_for_practice",
+  "validated_questions_embedded": true
+}

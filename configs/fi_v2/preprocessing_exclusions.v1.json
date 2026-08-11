@@ -1,0 +1,48 @@
+{
+  "schema_version": "fi-preprocessing-exclusions-v1",
+  "policy": "Exclude only source-verified clips for which deterministic Whisper small.en produced no timestamped words. Official transcript text is not substituted because it has no word timestamps; synthetic timing is forbidden.",
+  "entries": [
+    {
+      "video_id": "GMwEmLo-gfc.002.mp4",
+      "split": "train",
+      "source_sha256": "ee380c2529bedff16ea666838e58741f13f5e2f3575a73a7cb3e96ab992d71d2",
+      "reason_code": "whisper_no_words",
+      "official_transcript_available": true
+    },
+    {
+      "video_id": "KRo-x2uoHUg.003.mp4",
+      "split": "train",
+      "source_sha256": "be19bf7fa05a946111a7d263e1ce46aee8488685ee94b6024b0408347a37ed7a",
+      "reason_code": "whisper_no_words",
+      "official_transcript_available": false
+    },
+    {
+      "video_id": "c5ZnKbaNCE8.005.mp4",
+      "split": "train",
+      "source_sha256": "456da4caba3c46b02a49ce4d8b04e0e7382a5ebd434181d7829331c895df60a6",
+      "reason_code": "whisper_no_words",
+      "official_transcript_available": true
+    },
+    {
+      "video_id": "qtB-CogljAo.005.mp4",
+      "split": "train",
+      "source_sha256": "07c1ce5f2996590026fb61607425dd75df82f8a4a66f906fc9403214af4776e5",
+      "reason_code": "whisper_no_words",
+      "official_transcript_available": true
+    },
+    {
+      "video_id": "yzgA9oAEgI4.002.mp4",
+      "split": "train",
+      "source_sha256": "7b13bfb25d3d11be58bc693ebc8f6d7a314989c958d9f5cb0d2cfd6847cccc49",
+      "reason_code": "whisper_no_words",
+      "official_transcript_available": true
+    },
+    {
+      "video_id": "vfqYI2QmfeU.003.mp4",
+      "split": "validation",
+      "source_sha256": "380c968122175143dfae1829473556b45c25450d63d6c090d4010f4df2393995",
+      "reason_code": "whisper_no_words",
+      "official_transcript_available": true
+    }
+  ]
+}

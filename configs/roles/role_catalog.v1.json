@@ -1,0 +1,95 @@
+{
+  "schema_version": "role-catalog-v1",
+  "roles": [
+    {
+      "role_id": "junior_frontend_developer",
+      "display_name": "Junior Frontend Developer",
+      "template_version": "1.0.0",
+      "review_status": "pending_faculty_review",
+      "supported_title_terms": ["frontend developer", "front-end developer", "frontend engineer", "front-end engineer", "react developer", "web developer", "frontend intern"],
+      "supported_seniority_terms": ["intern", "internship", "junior", "entry level", "entry-level", "graduate", "associate", "fresher", "0-2 years", "0 to 2 years"],
+      "unsupported_title_terms": [],
+      "unsupported_seniority_terms": ["senior", "lead", "principal", "staff engineer", "manager", "architect", "5+ years", "7+ years", "10+ years"],
+      "competencies": [
+        {"competency_id": "programming_fundamentals", "base_weight": 0.2},
+        {"competency_id": "frontend_engineering", "base_weight": 0.25},
+        {"competency_id": "web_accessibility", "base_weight": 0.15},
+        {"competency_id": "debugging_problem_solving", "base_weight": 0.15},
+        {"competency_id": "system_design_basics", "base_weight": 0.1},
+        {"competency_id": "technical_communication", "base_weight": 0.15}
+      ]
+    },
+    {
+      "role_id": "junior_full_stack_developer",
+      "display_name": "Junior Full-Stack Developer",
+      "template_version": "1.0.0",
+      "review_status": "pending_faculty_review",
+      "supported_title_terms": ["full stack developer", "full-stack developer", "full stack engineer", "full-stack engineer", "software developer", "software engineer", "full stack intern"],
+      "supported_seniority_terms": ["intern", "internship", "junior", "entry level", "entry-level", "graduate", "associate", "fresher", "0-2 years", "0 to 2 years"],
+      "unsupported_title_terms": [],
+      "unsupported_seniority_terms": ["senior", "lead", "principal", "staff engineer", "manager", "architect", "5+ years", "7+ years", "10+ years"],
+      "competencies": [
+        {"competency_id": "programming_fundamentals", "base_weight": 0.15},
+        {"competency_id": "frontend_engineering", "base_weight": 0.2},
+        {"competency_id": "api_design", "base_weight": 0.2},
+        {"competency_id": "database_reasoning", "base_weight": 0.15},
+        {"competency_id": "debugging_problem_solving", "base_weight": 0.15},
+        {"competency_id": "technical_communication", "base_weight": 0.15}
+      ]
+    },
+    {
+      "role_id": "junior_data_analyst",
+      "display_name": "Junior Data Analyst",
+      "template_version": "1.0.0",
+      "review_status": "pending_faculty_review",
+      "supported_title_terms": ["data analyst", "business intelligence analyst", "bi analyst", "reporting analyst", "analytics intern", "data analyst intern"],
+      "supported_seniority_terms": ["intern", "internship", "junior", "entry level", "entry-level", "graduate", "associate", "fresher", "0-2 years", "0 to 2 years"],
+      "unsupported_title_terms": [],
+      "unsupported_seniority_terms": ["senior", "lead", "principal", "manager", "architect", "5+ years", "7+ years", "10+ years"],
+      "competencies": [
+        {"competency_id": "data_analysis_sql", "base_weight": 0.25},
+        {"competency_id": "statistics_reasoning", "base_weight": 0.2},
+        {"competency_id": "data_visualization", "base_weight": 0.2},
+        {"competency_id": "database_reasoning", "base_weight": 0.15},
+        {"competency_id": "debugging_problem_solving", "base_weight": 0.1},
+        {"competency_id": "technical_communication", "base_weight": 0.1}
+      ]
+    },
+    {
+      "role_id": "junior_machine_learning_engineer",
+      "display_name": "Junior Machine Learning Engineer",
+      "template_version": "1.0.0",
+      "review_status": "pending_faculty_review",
+      "supported_title_terms": ["machine learning engineer", "ml engineer", "ai engineer", "machine learning intern", "ml intern", "applied ai engineer"],
+      "supported_seniority_terms": ["intern", "internship", "junior", "entry level", "entry-level", "graduate", "associate", "fresher", "0-2 years", "0 to 2 years"],
+      "unsupported_title_terms": [],
+      "unsupported_seniority_terms": ["senior", "lead", "principal", "staff engineer", "manager", "architect", "5+ years", "7+ years", "10+ years"],
+      "competencies": [
+        {"competency_id": "programming_fundamentals", "base_weight": 0.15},
+        {"competency_id": "ml_fundamentals", "base_weight": 0.2},
+        {"competency_id": "model_evaluation", "base_weight": 0.2},
+        {"competency_id": "ml_engineering", "base_weight": 0.2},
+        {"competency_id": "debugging_problem_solving", "base_weight": 0.15},
+        {"competency_id": "technical_communication", "base_weight": 0.1}
+      ]
+    },
+    {
+      "role_id": "junior_devops_cloud_engineer",
+      "display_name": "Junior DevOps / Cloud Engineer",
+      "template_version": "1.0.0",
+      "review_status": "pending_faculty_review",
+      "supported_title_terms": ["devops engineer", "cloud engineer", "platform engineer", "site reliability engineer", "sre intern", "devops intern", "cloud intern"],
+      "supported_seniority_terms": ["intern", "internship", "junior", "entry level", "entry-level", "graduate", "associate", "fresher", "0-2 years", "0 to 2 years"],
+      "unsupported_title_terms": [],
+      "unsupported_seniority_terms": ["senior", "lead", "principal", "staff engineer", "manager", "architect", "5+ years", "7+ years", "10+ years"],
+      "competencies": [
+        {"competency_id": "cloud_platform", "base_weight": 0.2},
+        {"competency_id": "cicd_automation", "base_weight": 0.2},
+        {"competency_id": "observability_reliability", "base_weight": 0.2},
+        {"competency_id": "system_design_basics", "base_weight": 0.15},
+        {"competency_id": "debugging_problem_solving", "base_weight": 0.15},
+        {"competency_id": "technical_communication", "base_weight": 0.1}
+      ]
+    }
+  ]
+}

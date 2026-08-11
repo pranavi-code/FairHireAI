@@ -1,0 +1,115 @@
+{
+  "schema_version": "knowledge-source-policies-v1",
+  "sources": [
+    {
+      "source_id": "SRC-010",
+      "publisher": "O*NET Resource Center",
+      "source_type": "occupation_taxonomy",
+      "license_url": "https://www.onetcenter.org/license_db.html",
+      "content_policy": "open_content",
+      "permitted_use": "Ingest O*NET occupation, task, skill, knowledge, and technology records except fields listed as licence exceptions.",
+      "attribution_text": "O*NET® is a trademark of the U.S. Department of Labor. O*NET data are used under CC BY 4.0; release and exceptions are recorded.",
+      "retrieval_enabled": true,
+      "review_status": "approved"
+    },
+    {
+      "source_id": "SRC-011",
+      "publisher": "European Commission",
+      "source_type": "occupation_taxonomy",
+      "license_url": "https://esco.ec.europa.eu/en/about-esco/escopedia/escopedia/esco-api",
+      "content_policy": "metadata_only",
+      "permitted_use": "Store ESCO concept URIs, labels, versions, and relationship metadata. Do not copy extended text until the classification data notice is archived.",
+      "attribution_text": "European Skills, Competences, Qualifications and Occupations (ESCO), European Commission.",
+      "retrieval_enabled": false,
+      "review_status": "pending"
+    },
+    {
+      "source_id": "SRC-012",
+      "publisher": "ACM, IEEE Computer Society, and AAAI",
+      "source_type": "curriculum",
+      "license_url": null,
+      "content_policy": "reviewer_summary",
+      "permitted_use": "Store bibliographic metadata, knowledge-area names, and original reviewer-authored summaries only.",
+      "attribution_text": "Computer Science Curricula 2023, ACM Press, IEEE Computer Society Press, and AAAI Press, DOI 10.1145/3664191.",
+      "retrieval_enabled": true,
+      "review_status": "approved"
+    },
+    {
+      "source_id": "SRC-013",
+      "publisher": "Mozilla Contributors",
+      "source_type": "technical_documentation",
+      "license_url": "https://developer.mozilla.org/en-US/docs/MDN/Writing_guidelines/Attrib_copyright_license",
+      "content_policy": "open_content",
+      "permitted_use": "Ingest selected documentation with attribution and ShareAlike compliance; record page URL and retrieval date.",
+      "attribution_text": "Content adapted from MDN Web Docs by Mozilla Contributors under CC BY-SA 2.5 or later.",
+      "retrieval_enabled": true,
+      "review_status": "approved"
+    },
+    {
+      "source_id": "SRC-014",
+      "publisher": "OWASP Foundation",
+      "source_type": "technical_documentation",
+      "license_url": "https://owasp.org/www-policy/operational/general-disclaimer.html",
+      "content_policy": "permitted_excerpt",
+      "permitted_use": "Ingest only from an OWASP project whose page-specific licence was verified; otherwise store an original summary and canonical link.",
+      "attribution_text": "OWASP Foundation content; page-specific licence and attribution are preserved.",
+      "retrieval_enabled": true,
+      "review_status": "approved"
+    },
+    {
+      "source_id": "SRC-015",
+      "publisher": "PostgreSQL Global Development Group",
+      "source_type": "technical_documentation",
+      "license_url": "https://www.postgresql.org/about/licence/",
+      "content_policy": "open_content",
+      "permitted_use": "Ingest selected PostgreSQL documentation while preserving the copyright and licence notice.",
+      "attribution_text": "Portions Copyright © 1996-2026, The PostgreSQL Global Development Group; used under the PostgreSQL Licence.",
+      "retrieval_enabled": true,
+      "review_status": "approved"
+    },
+    {
+      "source_id": "SRC-016",
+      "publisher": "Python Software Foundation",
+      "source_type": "technical_documentation",
+      "license_url": "https://docs.python.org/3/license.html",
+      "content_policy": "open_content",
+      "permitted_use": "Ingest selected versioned Python documentation under PSF Licence 2; preserve 0BSD notices for documentation code examples.",
+      "attribution_text": "Python documentation © Python Software Foundation; used under PSF Licence 2.",
+      "retrieval_enabled": true,
+      "review_status": "approved"
+    },
+    {
+      "source_id": "SRC-017",
+      "publisher": "Broadcom / Spring",
+      "source_type": "technical_documentation",
+      "license_url": null,
+      "content_policy": "reviewer_summary",
+      "permitted_use": "Store canonical links and original reviewer-authored summaries only until page-specific documentation reuse terms are recorded.",
+      "attribution_text": "Spring documentation, canonical page linked; no source text copied.",
+      "retrieval_enabled": true,
+      "review_status": "approved"
+    },
+    {
+      "source_id": "SRC-018",
+      "publisher": "Docker, Inc.",
+      "source_type": "technical_documentation",
+      "license_url": null,
+      "content_policy": "reviewer_summary",
+      "permitted_use": "Store canonical links and original reviewer-authored summaries only until page-specific documentation reuse terms are recorded.",
+      "attribution_text": "Docker documentation, canonical page linked; no source text copied.",
+      "retrieval_enabled": true,
+      "review_status": "approved"
+    },
+    {
+      "source_id": "SRC-019",
+      "publisher": "Git project",
+      "source_type": "technical_documentation",
+      "license_url": null,
+      "content_policy": "reviewer_summary",
+      "permitted_use": "Store canonical links and original reviewer-authored summaries only until the specific page licence is recorded.",
+      "attribution_text": "Git documentation, canonical page linked; no source text copied.",
+      "retrieval_enabled": true,
+      "review_status": "approved"
+    }
+  ]
+}

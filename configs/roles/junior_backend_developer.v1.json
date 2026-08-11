@@ -1,0 +1,360 @@
+{
+  "schema_version": "role-template-v1",
+  "role_id": "junior_backend_developer",
+  "display_name": "Junior Backend Developer",
+  "template_version": "1.0.0",
+  "review_status": "pending_faculty_review",
+  "supported_title_terms": [
+    "backend developer",
+    "backend engineer",
+    "back-end developer",
+    "back-end engineer",
+    "server side developer",
+    "server-side developer",
+    "api developer",
+    "java backend developer",
+    "python backend developer",
+    "backend intern",
+    "backend software engineer"
+  ],
+  "supported_seniority_terms": [
+    "intern",
+    "internship",
+    "junior",
+    "entry level",
+    "entry-level",
+    "graduate",
+    "associate",
+    "fresher",
+    "0-2 years",
+    "0 to 2 years"
+  ],
+  "unsupported_title_terms": [
+    "frontend",
+    "front-end",
+    "full stack",
+    "full-stack",
+    "data analyst",
+    "data scientist",
+    "machine learning engineer",
+    "mobile developer",
+    "android developer",
+    "ios developer",
+    "devops engineer",
+    "site reliability engineer",
+    "ui designer",
+    "ux designer"
+  ],
+  "unsupported_seniority_terms": [
+    "senior",
+    "lead",
+    "principal",
+    "staff engineer",
+    "manager",
+    "architect",
+    "5+ years",
+    "7+ years",
+    "10+ years"
+  ],
+  "competencies": [
+    {
+      "competency_id": "programming_fundamentals",
+      "name": "Programming Fundamentals",
+      "base_weight": 0.20,
+      "description": "Uses suitable data structures, control flow, modularity, complexity reasoning, and error handling in backend code.",
+      "approved_skill_terms": [
+        "python",
+        "java",
+        "c#",
+        "javascript",
+        "typescript",
+        "object oriented programming",
+        "oop",
+        "data structures",
+        "algorithms",
+        "exception handling",
+        "unit testing",
+        "clean code"
+      ],
+      "rubric_criteria": [
+        "selects appropriate data structures and control flow",
+        "explains time and space complexity at a junior level",
+        "separates responsibilities into testable functions",
+        "handles invalid input and failures explicitly"
+      ],
+      "core_question": {
+        "question_id": "pf_core_01",
+        "prompt": "A backend endpoint becomes much slower as the number of records grows. Explain how you would inspect the code, identify an inefficient data structure or algorithm, and improve it without changing the endpoint's behaviour.",
+        "expected_evidence": [
+          "systematic inspection",
+          "complexity reasoning",
+          "appropriate data structure",
+          "tests preserving behaviour"
+        ]
+      },
+      "follow_ups": [
+        {
+          "question_id": "pf_follow_01",
+          "trigger_criterion": "complexity_reasoning",
+          "prompt": "What time-complexity change would you expect from your proposed improvement, and why?"
+        },
+        {
+          "question_id": "pf_follow_02",
+          "trigger_criterion": "testing",
+          "prompt": "Which tests would prove that the optimization did not change the endpoint's results?"
+        }
+      ]
+    },
+    {
+      "competency_id": "api_design",
+      "name": "API Design",
+      "base_weight": 0.20,
+      "description": "Designs clear HTTP APIs with validation, authentication/authorization awareness, predictable errors, and suitable status codes.",
+      "approved_skill_terms": [
+        "rest",
+        "rest api",
+        "restful",
+        "http",
+        "fastapi",
+        "django",
+        "flask",
+        "spring boot",
+        "asp.net",
+        "node.js",
+        "express",
+        "api validation",
+        "authentication",
+        "authorization",
+        "jwt",
+        "openapi",
+        "swagger"
+      ],
+      "rubric_criteria": [
+        "chooses suitable resources, methods, and status codes",
+        "defines request validation and stable error responses",
+        "distinguishes authentication from authorization",
+        "considers idempotency, pagination, and versioning when relevant"
+      ],
+      "core_question": {
+        "question_id": "api_core_01",
+        "prompt": "Design an API endpoint that lets an authenticated user update their profile. Explain the URL and HTTP method, request validation, authorization checks, success response, and important error responses.",
+        "expected_evidence": [
+          "resource-oriented route",
+          "method and status codes",
+          "validation",
+          "authorization",
+          "error contract"
+        ]
+      },
+      "follow_ups": [
+        {
+          "question_id": "api_follow_01",
+          "trigger_criterion": "authorization",
+          "prompt": "How would you prevent one authenticated user from updating another user's profile?"
+        },
+        {
+          "question_id": "api_follow_02",
+          "trigger_criterion": "error_contract",
+          "prompt": "Show how the API should respond when two request fields are invalid."
+        }
+      ]
+    },
+    {
+      "competency_id": "database_reasoning",
+      "name": "Database Reasoning",
+      "base_weight": 0.20,
+      "description": "Models relational data, writes and reasons about queries, uses indexes appropriately, and understands transaction consistency.",
+      "approved_skill_terms": [
+        "sql",
+        "postgresql",
+        "mysql",
+        "sqlite",
+        "database design",
+        "relational database",
+        "normalization",
+        "indexing",
+        "transactions",
+        "joins",
+        "orm",
+        "sqlalchemy",
+        "hibernate"
+      ],
+      "rubric_criteria": [
+        "models entities and relationships without obvious duplication",
+        "explains joins and query filtering",
+        "uses indexes based on query patterns and trade-offs",
+        "uses transactions for multi-step consistency"
+      ],
+      "core_question": {
+        "question_id": "db_core_01",
+        "prompt": "An orders endpoint must return a customer's recent orders and item totals, but the query is slow. Explain the tables and relationships you expect, the query approach, the indexes you would inspect or add, and how you would verify the improvement.",
+        "expected_evidence": [
+          "relational model",
+          "join reasoning",
+          "query-plan inspection",
+          "index trade-offs",
+          "measurement"
+        ]
+      },
+      "follow_ups": [
+        {
+          "question_id": "db_follow_01",
+          "trigger_criterion": "index_tradeoff",
+          "prompt": "Why should we not add an index to every column?"
+        },
+        {
+          "question_id": "db_follow_02",
+          "trigger_criterion": "transactions",
+          "prompt": "Where would a transaction be necessary when creating an order and reducing stock?"
+        }
+      ]
+    },
+    {
+      "competency_id": "debugging_problem_solving",
+      "name": "Debugging and Problem Solving",
+      "base_weight": 0.15,
+      "description": "Reproduces faults, forms evidence-based hypotheses, uses logs/tests, isolates causes, and verifies fixes.",
+      "approved_skill_terms": [
+        "debugging",
+        "troubleshooting",
+        "logging",
+        "monitoring",
+        "testing",
+        "pytest",
+        "junit",
+        "integration testing",
+        "postman",
+        "git",
+        "root cause analysis"
+      ],
+      "rubric_criteria": [
+        "collects facts and reproduces before changing code",
+        "narrows hypotheses with logs, metrics, and tests",
+        "distinguishes symptom mitigation from root-cause correction",
+        "verifies the fix and guards against regression"
+      ],
+      "core_question": {
+        "question_id": "debug_core_01",
+        "prompt": "After a deployment, an API intermittently returns HTTP 500 for some requests. Walk through your investigation from the first alert to a verified fix.",
+        "expected_evidence": [
+          "impact assessment",
+          "reproduction",
+          "logs and correlation",
+          "hypothesis isolation",
+          "rollback awareness",
+          "regression test"
+        ]
+      },
+      "follow_ups": [
+        {
+          "question_id": "debug_follow_01",
+          "trigger_criterion": "hypothesis_isolation",
+          "prompt": "What evidence would help you decide whether the failure is in application code, the database, or an external service?"
+        },
+        {
+          "question_id": "debug_follow_02",
+          "trigger_criterion": "verification",
+          "prompt": "How would you verify the fix under the same conditions that produced the intermittent failure?"
+        }
+      ]
+    },
+    {
+      "competency_id": "system_design_basics",
+      "name": "System Design Basics",
+      "base_weight": 0.15,
+      "description": "Breaks a small backend system into components, defines data flow and interfaces, and identifies basic reliability and scaling trade-offs.",
+      "approved_skill_terms": [
+        "system design",
+        "microservices",
+        "distributed systems",
+        "caching",
+        "redis",
+        "message queue",
+        "rabbitmq",
+        "kafka",
+        "docker",
+        "cloud",
+        "aws",
+        "azure",
+        "gcp",
+        "load balancing"
+      ],
+      "rubric_criteria": [
+        "clarifies functional and basic non-functional requirements",
+        "identifies services, storage, and interfaces",
+        "explains one useful cache or asynchronous-processing decision",
+        "discusses failure handling and an incremental scaling path"
+      ],
+      "core_question": {
+        "question_id": "sd_core_01",
+        "prompt": "Design a small URL-shortening backend for an initial university user base. Explain its API, data model, request flow, unique-code generation, and what you would change if traffic grew.",
+        "expected_evidence": [
+          "requirements",
+          "API",
+          "storage",
+          "identifier generation",
+          "read path",
+          "incremental scaling"
+        ]
+      },
+      "follow_ups": [
+        {
+          "question_id": "sd_follow_01",
+          "trigger_criterion": "failure_handling",
+          "prompt": "What should happen if two requests attempt to create the same short code?"
+        },
+        {
+          "question_id": "sd_follow_02",
+          "trigger_criterion": "scaling",
+          "prompt": "Which single component would you scale or cache first, and what measurement would justify it?"
+        }
+      ]
+    },
+    {
+      "competency_id": "technical_communication",
+      "name": "Technical Communication",
+      "base_weight": 0.10,
+      "description": "Explains technical decisions in a structured, relevant, and audience-aware way while making assumptions and trade-offs explicit.",
+      "approved_skill_terms": [
+        "communication",
+        "documentation",
+        "technical writing",
+        "code review",
+        "agile",
+        "scrum",
+        "teamwork",
+        "collaboration",
+        "presentation"
+      ],
+      "rubric_criteria": [
+        "answers the question directly before adding detail",
+        "uses a clear situation-decision-reason-result structure",
+        "states assumptions and trade-offs",
+        "uses concrete evidence from a project or experience"
+      ],
+      "core_question": {
+        "question_id": "tc_core_01",
+        "prompt": "Choose one backend project or technical task you worked on. Explain the problem, your specific responsibility, one important design decision and trade-off, and the result as if speaking to a new teammate.",
+        "expected_evidence": [
+          "structured explanation",
+          "specific ownership",
+          "decision rationale",
+          "trade-off",
+          "result"
+        ]
+      },
+      "follow_ups": [
+        {
+          "question_id": "tc_follow_01",
+          "trigger_criterion": "tradeoff",
+          "prompt": "What alternative did you consider, and why did you reject it?"
+        },
+        {
+          "question_id": "tc_follow_02",
+          "trigger_criterion": "specific_evidence",
+          "prompt": "What measurable or observable result showed that your decision worked?"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.backend
+    env_file:
+      - ../.env
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=5)",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    volumes:
+      # Configure these environment values only after training. The directory
+      # remains read-only so the API cannot mutate checkpoints.
+      - ${FAIRHIRE_MODEL_DIR:?Set FAIRHIRE_MODEL_DIR to the verified checkpoint directory}:/models:ro

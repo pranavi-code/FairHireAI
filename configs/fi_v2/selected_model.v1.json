@@ -1,0 +1,30 @@
+{
+  "schema_version": "fairhire-selected-model-v1",
+  "selection_status": "provisional_performance_winner_pending_external_validation",
+  "selected_on": "2026-07-27",
+  "run_name": "fi_v2_mag_bert",
+  "model_type": "mag",
+  "modalities": "text_audio_visual",
+  "loss": "mse",
+  "selection_rule": "lowest validation MSE, confirmed by lowest MAE/RMSE and highest Pearson correlation among the seven planned experiments",
+  "deployment_gate": "The permitted FI V2 fairness/error audit is complete. Deployment approval still requires consented student evaluation, faculty calibration, and safe handling of low-confidence/extreme-score cases.",
+  "checkpoint_path": "D:/FairHireAI-data/runs/fi_v2_mag_bert/best.pt",
+  "checkpoint_sha256": "0aaca90769f0541e615fd2cefeb25fb71ce1843e3bde311eda808da8a8d191e2",
+  "training_config_path": "configs/fi_v2/mag_bert_laptop.json",
+  "scaler_path": "D:/FairHireAI-data/processed/fi_v2_full/train_only_standardizer.npz",
+  "preprocessing_audit_path": "D:/FairHireAI-data/processed/fi_v2_full/preprocessing_audit.json",
+  "dataset_identity_sha256": "03a949d3a2fcc050c7820f6cc3b3a2e1b282394ecf3e7a5d2480e9e78e3515c1",
+  "validation_metrics": {
+    "validation_loss": 0.014294303843843077,
+    "mae": 0.09488766413441058,
+    "rmse": 0.11955878808565437,
+    "pearson": 0.5967589297175386,
+    "threshold": 0.5,
+    "threshold_accuracy": 0.7078539269634817,
+    "threshold_f1": 0.7378815080789947
+  },
+  "comparison_csv": "outputs/fi_experiments/fi_experiment_comparison.csv",
+  "comparison_json": "outputs/fi_experiments/fi_experiment_comparison.json",
+  "fairness_error_audit": "outputs/fairness_error_audit/fairness_error_audit.json",
+  "intended_use": "Base Multimodal Interview Signal for student placement-readiness feedback only; not a hiring, personality, emotion, or technical-readiness decision."
+}

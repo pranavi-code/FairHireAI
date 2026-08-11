@@ -1,0 +1,653 @@
+{
+  "method": "GradientShap",
+  "video_id": "datcFOBWYxc.004.mp4",
+  "label": 0.5233644859813084,
+  "prediction": 0.6025691032409668,
+  "samples": 16,
+  "noise_standard_deviation": 0.01,
+  "seed": 8,
+  "config": "D:\\FairHireAI\\configs\\fi_v2\\mag_bert_laptop.json",
+  "checkpoint": "D:\\FairHireAI-data\\runs\\fi_v2_mag_bert\\best.pt",
+  "modality_absolute_attribution": {
+    "text": 5.308387756347656,
+    "acoustic": 0.36855635046958923,
+    "visual": 4.922454833984375
+  },
+  "modality_share": {
+    "text": 0.5008196960974269,
+    "acoustic": 0.03477143869459033,
+    "visual": 0.46440886520798275
+  },
+  "top_acoustic_features": [
+    {
+      "feature": "slopeUV0-500_sma3nz_amean",
+      "absolute_attribution": 0.01992891915142536
+    },
+    {
+      "feature": "alphaRatioV_sma3nz_amean",
+      "absolute_attribution": 0.013818994164466858
+    },
+    {
+      "feature": "slopeUV500-1500_sma3nz_amean",
+      "absolute_attribution": 0.010303729213774204
+    },
+    {
+      "feature": "slopeV0-500_sma3nz_amean",
+      "absolute_attribution": 0.009618555195629597
+    },
+    {
+      "feature": "mfcc3_sma3_amean",
+      "absolute_attribution": 0.009405246004462242
+    },
+    {
+      "feature": "mfcc4V_sma3nz_amean",
+      "absolute_attribution": 0.008932365104556084
+    },
+    {
+      "feature": "loudness_sma3_pctlrange0-2",
+      "absolute_attribution": 0.008815968409180641
+    },
+    {
+      "feature": "slopeV500-1500_sma3nz_amean",
+      "absolute_attribution": 0.008752197027206421
+    },
+    {
+      "feature": "F0semitoneFrom27.5Hz_sma3nz_pctlrange0-2",
+      "absolute_attribution": 0.008314596489071846
+    },
+    {
+      "feature": "loudness_sma3_stddevNorm",
+      "absolute_attribution": 0.00773287657648325
+    },
+    {
+      "feature": "loudness_sma3_stddevRisingSlope",
+      "absolute_attribution": 0.007674256339669228
+    },
+    {
+      "feature": "F0semitoneFrom27.5Hz_sma3nz_percentile80.0",
+      "absolute_attribution": 0.007499419618397951
+    },
+    {
+      "feature": "F0semitoneFrom27.5Hz_sma3nz_percentile50.0",
+      "absolute_attribution": 0.007406292483210564
+    },
+    {
+      "feature": "loudness_sma3_meanRisingSlope",
+      "absolute_attribution": 0.0068434146232903
+    },
+    {
+      "feature": "shimmerLocaldB_sma3nz_amean",
+      "absolute_attribution": 0.006841758266091347
+    }
+  ],
+  "top_visual_features": [
+    {
+      "feature": "X_6",
+      "absolute_attribution": 0.03831677883863449
+    },
+    {
+      "feature": "X_13",
+      "absolute_attribution": 0.029972344636917114
+    },
+    {
+      "feature": "eye_lmk_X_54",
+      "absolute_attribution": 0.027918150648474693
+    },
+    {
+      "feature": "eye_lmk_X_31",
+      "absolute_attribution": 0.027200890704989433
+    },
+    {
+      "feature": "eye_lmk_X_39",
+      "absolute_attribution": 0.027141647413372993
+    },
+    {
+      "feature": "x_52",
+      "absolute_attribution": 0.026882098987698555
+    },
+    {
+      "feature": "X_36",
+      "absolute_attribution": 0.026667028665542603
+    },
+    {
+      "feature": "X_9",
+      "absolute_attribution": 0.026561399921774864
+    },
+    {
+      "feature": "X_12",
+      "absolute_attribution": 0.025367114692926407
+    },
+    {
+      "feature": "eye_lmk_X_41",
+      "absolute_attribution": 0.025130687281489372
+    },
+    {
+      "feature": "eye_lmk_x_5",
+      "absolute_attribution": 0.02506021410226822
+    },
+    {
+      "feature": "eye_lmk_X_7",
+      "absolute_attribution": 0.024637611582875252
+    },
+    {
+      "feature": "x_51",
+      "absolute_attribution": 0.024193784222006798
+    },
+    {
+      "feature": "x_26",
+      "absolute_attribution": 0.023602981120347977
+    },
+    {
+      "feature": "X_28",
+      "absolute_attribution": 0.022785887122154236
+    }
+  ],
+  "tokens": [
+    {
+      "position": 0,
+      "token": "[CLS]",
+      "is_word_token": false,
+      "text_attribution": -0.0006057657301425934,
+      "acoustic_attribution": 0.0,
+      "visual_attribution": 0.0
+    },
+    {
+      "position": 1,
+      "token": "she",
+      "is_word_token": true,
+      "text_attribution": 0.00021025969181209803,
+      "acoustic_attribution": 0.0045372555032372475,
+      "visual_attribution": -0.00617282185703516
+    },
+    {
+      "position": 2,
+      "token": "also",
+      "is_word_token": true,
+      "text_attribution": 0.00010854454012587667,
+      "acoustic_attribution": 0.0008306533563882113,
+      "visual_attribution": -0.0020757452584803104
+    },
+    {
+      "position": 3,
+      "token": "has",
+      "is_word_token": true,
+      "text_attribution": 2.5163404643535614e-05,
+      "acoustic_attribution": 0.00038356968434527516,
+      "visual_attribution": -0.0015304635744541883
+    },
+    {
+      "position": 4,
+      "token": "this",
+      "is_word_token": true,
+      "text_attribution": 4.1823252104222775e-05,
+      "acoustic_attribution": -8.613953832536936e-05,
+      "visual_attribution": -0.0006072793621569872
+    },
+    {
+      "position": 5,
+      "token": "style",
+      "is_word_token": true,
+      "text_attribution": 0.0010648765601217747,
+      "acoustic_attribution": 0.00020517082884907722,
+      "visual_attribution": -0.003695687046274543
+    },
+    {
+      "position": 6,
+      "token": "that",
+      "is_word_token": true,
+      "text_attribution": 2.4026259779930115e-05,
+      "acoustic_attribution": 0.0004078813944943249,
+      "visual_attribution": -0.0015011081704869866
+    },
+    {
+      "position": 7,
+      "token": "i",
+      "is_word_token": true,
+      "text_attribution": 6.682437378913164e-05,
+      "acoustic_attribution": 0.0014096329687163234,
+      "visual_attribution": -0.0035474514588713646
+    },
+    {
+      "position": 8,
+      "token": "loved",
+      "is_word_token": true,
+      "text_attribution": 0.00045503280125558376,
+      "acoustic_attribution": 0.002604456851258874,
+      "visual_attribution": -0.004947854205965996
+    },
+    {
+      "position": 9,
+      "token": "so",
+      "is_word_token": true,
+      "text_attribution": 0.00010187440784648061,
+      "acoustic_attribution": -8.777453331276774e-05,
+      "visual_attribution": -0.0014525430742651224
+    },
+    {
+      "position": 10,
+      "token": "it",
+      "is_word_token": true,
+      "text_attribution": 0.00010293390369042754,
+      "acoustic_attribution": 0.0008462128462269902,
+      "visual_attribution": -0.0011350925778970122
+    },
+    {
+      "position": 11,
+      "token": "was",
+      "is_word_token": true,
+      "text_attribution": 0.00013374343689065427,
+      "acoustic_attribution": 0.0012203807709738612,
+      "visual_attribution": -0.0017984320875257254
+    },
+    {
+      "position": 12,
+      "token": "a",
+      "is_word_token": true,
+      "text_attribution": 0.00018147914670407772,
+      "acoustic_attribution": 0.0006539953756146133,
+      "visual_attribution": -0.0021257135085761547
+    },
+    {
+      "position": 13,
+      "token": "different",
+      "is_word_token": true,
+      "text_attribution": 9.9606579169631e-05,
+      "acoustic_attribution": 0.0008048254530876875,
+      "visual_attribution": -0.0019028487149626017
+    },
+    {
+      "position": 14,
+      "token": "style",
+      "is_word_token": true,
+      "text_attribution": 0.000833120197057724,
+      "acoustic_attribution": 0.0010848620440810919,
+      "visual_attribution": -0.003864630125463009
+    },
+    {
+      "position": 15,
+      "token": "that",
+      "is_word_token": true,
+      "text_attribution": -2.6132911443710327e-06,
+      "acoustic_attribution": 0.0005755506572313607,
+      "visual_attribution": -0.0010711945360526443
+    },
+    {
+      "position": 16,
+      "token": "i",
+      "is_word_token": true,
+      "text_attribution": 3.199605271220207e-05,
+      "acoustic_attribution": 0.0006828762125223875,
+      "visual_attribution": -0.002010063035413623
+    },
+    {
+      "position": 17,
+      "token": "wanted",
+      "is_word_token": true,
+      "text_attribution": 0.00012493738904595375,
+      "acoustic_attribution": 0.0019227666780352592,
+      "visual_attribution": -0.003590298816561699
+    },
+    {
+      "position": 18,
+      "token": "for",
+      "is_word_token": true,
+      "text_attribution": 3.9888196624815464e-05,
+      "acoustic_attribution": 0.0003438259882386774,
+      "visual_attribution": -0.001763625768944621
+    },
+    {
+      "position": 19,
+      "token": "this",
+      "is_word_token": true,
+      "text_attribution": 3.982579801231623e-05,
+      "acoustic_attribution": 0.00031908153323456645,
+      "visual_attribution": -0.0011319033801555634
+    },
+    {
+      "position": 20,
+      "token": "book",
+      "is_word_token": true,
+      "text_attribution": 0.0004825238138437271,
+      "acoustic_attribution": 0.00027310915174894035,
+      "visual_attribution": -0.0004418743774294853
+    },
+    {
+      "position": 21,
+      "token": "as",
+      "is_word_token": true,
+      "text_attribution": 2.857600338757038e-05,
+      "acoustic_attribution": 0.00044307540520094335,
+      "visual_attribution": -0.0014101809356361628
+    },
+    {
+      "position": 22,
+      "token": "well",
+      "is_word_token": true,
+      "text_attribution": 0.0001645601587370038,
+      "acoustic_attribution": 0.0003498709120322019,
+      "visual_attribution": -0.0007844508509151638
+    },
+    {
+      "position": 23,
+      "token": "it",
+      "is_word_token": true,
+      "text_attribution": 9.391480125486851e-05,
+      "acoustic_attribution": 9.462315938435495e-05,
+      "visual_attribution": -0.0004822820774279535
+    },
+    {
+      "position": 24,
+      "token": "also",
+      "is_word_token": true,
+      "text_attribution": 0.00039779592771083117,
+      "acoustic_attribution": 0.002677581273019314,
+      "visual_attribution": -0.004944290034472942
+    },
+    {
+      "position": 25,
+      "token": "it",
+      "is_word_token": true,
+      "text_attribution": 0.00011680269381031394,
+      "acoustic_attribution": -0.0005375238251872361,
+      "visual_attribution": 0.0004081375082023442
+    },
+    {
+      "position": 26,
+      "token": "all",
+      "is_word_token": true,
+      "text_attribution": 0.00011531892232596874,
+      "acoustic_attribution": 0.002929924987256527,
+      "visual_attribution": -0.0033590251114219427
+    },
+    {
+      "position": 27,
+      "token": "depends",
+      "is_word_token": true,
+      "text_attribution": 0.0017214914551004767,
+      "acoustic_attribution": 0.0039051626808941364,
+      "visual_attribution": -0.010050001554191113
+    },
+    {
+      "position": 28,
+      "token": "on",
+      "is_word_token": true,
+      "text_attribution": -2.7902016881853342e-05,
+      "acoustic_attribution": 0.0007535142358392477,
+      "visual_attribution": -0.002033294178545475
+    },
+    {
+      "position": 29,
+      "token": "what",
+      "is_word_token": true,
+      "text_attribution": 1.74820888787508e-05,
+      "acoustic_attribution": 0.001657992834225297,
+      "visual_attribution": -0.0036842525005340576
+    },
+    {
+      "position": 30,
+      "token": "style",
+      "is_word_token": true,
+      "text_attribution": 0.002077447483316064,
+      "acoustic_attribution": 0.0012838412076234818,
+      "visual_attribution": -0.009162921458482742
+    },
+    {
+      "position": 31,
+      "token": "you",
+      "is_word_token": true,
+      "text_attribution": 0.0018830997869372368,
+      "acoustic_attribution": 0.0010346280178055167,
+      "visual_attribution": -0.003942450974136591
+    },
+    {
+      "position": 32,
+      "token": "'",
+      "is_word_token": true,
+      "text_attribution": 0.00041200144914910197,
+      "acoustic_attribution": 0.0012111181858927011,
+      "visual_attribution": -0.004051039926707745
+    },
+    {
+      "position": 33,
+      "token": "re",
+      "is_word_token": true,
+      "text_attribution": -0.0025624805130064487,
+      "acoustic_attribution": 0.0023554356303066015,
+      "visual_attribution": -0.001713816076517105
+    },
+    {
+      "position": 34,
+      "token": "looking",
+      "is_word_token": true,
+      "text_attribution": 0.00614169193431735,
+      "acoustic_attribution": -0.00033905019517987967,
+      "visual_attribution": -0.010688823647797108
+    },
+    {
+      "position": 35,
+      "token": "for",
+      "is_word_token": true,
+      "text_attribution": -7.630320033058524e-05,
+      "acoustic_attribution": -0.0001323120086453855,
+      "visual_attribution": -0.001692610327154398
+    },
+    {
+      "position": 36,
+      "token": ".",
+      "is_word_token": true,
+      "text_attribution": 4.431139677762985e-05,
+      "acoustic_attribution": -0.0016925223171710968,
+      "visual_attribution": -0.0038379051256924868
+    },
+    {
+      "position": 37,
+      "token": "there",
+      "is_word_token": true,
+      "text_attribution": -0.00022342021111398935,
+      "acoustic_attribution": 0.002246253890916705,
+      "visual_attribution": -0.0027521252632141113
+    },
+    {
+      "position": 38,
+      "token": "'",
+      "is_word_token": true,
+      "text_attribution": -0.00012496333511080593,
+      "acoustic_attribution": 0.0013750819489359856,
+      "visual_attribution": -0.0036050176713615656
+    },
+    {
+      "position": 39,
+      "token": "s",
+      "is_word_token": true,
+      "text_attribution": 0.00034059910103678703,
+      "acoustic_attribution": 0.0022918921895325184,
+      "visual_attribution": -0.004679450765252113
+    },
+    {
+      "position": 40,
+      "token": "no",
+      "is_word_token": true,
+      "text_attribution": -0.002322919201105833,
+      "acoustic_attribution": 0.001462452462874353,
+      "visual_attribution": -9.38650919124484e-05
+    },
+    {
+      "position": 41,
+      "token": "right",
+      "is_word_token": true,
+      "text_attribution": -0.00446359533816576,
+      "acoustic_attribution": -0.0007720473222434521,
+      "visual_attribution": 0.006828834302723408
+    },
+    {
+      "position": 42,
+      "token": "or",
+      "is_word_token": true,
+      "text_attribution": -0.0014238939620554447,
+      "acoustic_attribution": 0.0009003455634228885,
+      "visual_attribution": 1.666857860982418e-05
+    },
+    {
+      "position": 43,
+      "token": "wrong",
+      "is_word_token": true,
+      "text_attribution": -0.005495392717421055,
+      "acoustic_attribution": -0.0011563003063201904,
+      "visual_attribution": 0.0075147319585084915
+    },
+    {
+      "position": 44,
+      "token": "it",
+      "is_word_token": true,
+      "text_attribution": -0.00021552940597757697,
+      "acoustic_attribution": 0.00039584055775776505,
+      "visual_attribution": -0.0006975575815886259
+    },
+    {
+      "position": 45,
+      "token": "'",
+      "is_word_token": true,
+      "text_attribution": 0.00014931714395061135,
+      "acoustic_attribution": 0.0004768138169310987,
+      "visual_attribution": -0.0026631909422576427
+    },
+    {
+      "position": 46,
+      "token": "s",
+      "is_word_token": true,
+      "text_attribution": 0.0006506043719127774,
+      "acoustic_attribution": 0.0005614819820038974,
+      "visual_attribution": -0.0024405212607234716
+    },
+    {
+      "position": 47,
+      "token": "just",
+      "is_word_token": true,
+      "text_attribution": 0.00020869594300165772,
+      "acoustic_attribution": 0.0010377797298133373,
+      "visual_attribution": -0.0028101736679673195
+    },
+    {
+      "position": 48,
+      "token": "a",
+      "is_word_token": true,
+      "text_attribution": 0.001034073531627655,
+      "acoustic_attribution": 0.0007103853859007359,
+      "visual_attribution": -0.004094169475138187
+    },
+    {
+      "position": 49,
+      "token": "vision",
+      "is_word_token": true,
+      "text_attribution": -0.00951365102082491,
+      "acoustic_attribution": -0.009209302254021168,
+      "visual_attribution": 0.01772465929389
+    },
+    {
+      "position": 50,
+      "token": "an",
+      "is_word_token": true,
+      "text_attribution": 1.87380937859416e-05,
+      "acoustic_attribution": 0.0002719468902796507,
+      "visual_attribution": -0.0012170252157375216
+    },
+    {
+      "position": 51,
+      "token": "artistic",
+      "is_word_token": true,
+      "text_attribution": 0.0024162381887435913,
+      "acoustic_attribution": 6.63159298710525e-05,
+      "visual_attribution": -0.006052607204765081
+    },
+    {
+      "position": 52,
+      "token": "vision",
+      "is_word_token": true,
+      "text_attribution": -0.004744492471218109,
+      "acoustic_attribution": -0.0008380362414754927,
+      "visual_attribution": 0.0065055289305746555
+    },
+    {
+      "position": 53,
+      "token": "they",
+      "is_word_token": true,
+      "text_attribution": 2.9500399250537157e-05,
+      "acoustic_attribution": -0.00022026468650437891,
+      "visual_attribution": -0.0003802448627538979
+    },
+    {
+      "position": 54,
+      "token": "have",
+      "is_word_token": true,
+      "text_attribution": -9.05569177120924e-05,
+      "acoustic_attribution": 0.0001104148686863482,
+      "visual_attribution": -0.00019189773593097925
+    },
+    {
+      "position": 55,
+      "token": "for",
+      "is_word_token": true,
+      "text_attribution": -6.934115663170815e-05,
+      "acoustic_attribution": -0.0008798794005997479,
+      "visual_attribution": 0.0007385013159364462
+    },
+    {
+      "position": 56,
+      "token": "the",
+      "is_word_token": true,
+      "text_attribution": 0.0002159962896257639,
+      "acoustic_attribution": 0.0012398787075653672,
+      "visual_attribution": -0.0024200831539928913
+    },
+    {
+      "position": 57,
+      "token": "book",
+      "is_word_token": true,
+      "text_attribution": 0.0017652777023613453,
+      "acoustic_attribution": -0.0034653369802981615,
+      "visual_attribution": -0.0004067211411893368
+    },
+    {
+      "position": 58,
+      "token": "for",
+      "is_word_token": true,
+      "text_attribution": -3.061239840462804e-05,
+      "acoustic_attribution": -0.0006888562347739935,
+      "visual_attribution": -0.0008940492989495397
+    },
+    {
+      "position": 59,
+      "token": "this",
+      "is_word_token": true,
+      "text_attribution": -0.00014616758562624454,
+      "acoustic_attribution": -0.0034509911201894283,
+      "visual_attribution": 0.002090887865051627
+    },
+    {
+      "position": 60,
+      "token": "one",
+      "is_word_token": true,
+      "text_attribution": -1.7713871784508228e-05,
+      "acoustic_attribution": 0.0005869025480933487,
+      "visual_attribution": -0.0020833746530115604
+    },
+    {
+      "position": 61,
+      "token": "basic",
+      "is_word_token": true,
+      "text_attribution": 0.0003416207619011402,
+      "acoustic_attribution": 0.0022819440346211195,
+      "visual_attribution": -0.004688257817178965
+    },
+    {
+      "position": 62,
+      "token": "[SEP]",
+      "is_word_token": false,
+      "text_attribution": -0.002131845336407423,
+      "acoustic_attribution": 0.0,
+      "visual_attribution": 0.0
+    }
+  ],
+  "safety_note": "Visual/audio attribution explains the base interview signal only; it is not an emotion, personality, technical-readiness, or hiring judgment.",
+  "arrays": "D:\\FairHireAI\\outputs\\gradient_shap\\mag_bert_representative\\datcFOBWYxc.004_gradient_shap.npz"
+}

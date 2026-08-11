@@ -2,7 +2,7 @@
 
 ## 1. Final project definition
 
-**FairHireAI is a student-facing placement-readiness platform.** A student uploads a resume, selects a target role, optionally supplies a job description (JD), completes a structured adaptive mock interview, and receives evidence-backed readiness, skill-gap feedback, a learning roadmap, and progress across reattempts.
+**FairHireAI is a student-facing placement-readiness platform.** A student optionally uploads a job description (JD), selects or confirms the approved target role, uploads a resume, completes a structured adaptive mock interview, and receives evidence-backed readiness, skill-gap feedback, a learning roadmap, and progress across reattempts. When a JD is supplied, the assessment and interview are adapted to its approved role requirements.
 
 It does **not** decide whether a recruiter should hire someone. It does **not** rank students. It does **not** claim to know a specific company's hiring process. A selected company name is optional motivational context only; assessment is based on the selected role and JD.
 
@@ -12,7 +12,7 @@ FairHireAI reproduces the fair multimodal MAG-BERT-ARL interview-assessment mode
 
 ### First-release scope
 
-Start with **one role: Junior Backend Developer**. Support more roles only after the first role, research evaluation, and demo are stable.
+The application supports a **versioned catalog of approved student/early-career roles**. A student searches the catalog and confirms one role per assessment. Junior Backend Developer remains the first research-validation and evaluator-study role; additional catalog roles must use the same six-competency, reviewer-controlled template contract and must never create an uncontrolled rubric at runtime.
 
 ## 2. Abstract draft
 
@@ -113,10 +113,11 @@ Report Pearson correlation and RMSE for continuous labels. If thresholding into 
 
 ```text
 Student
-  -> Upload resume
-  -> Select target role
   -> Optionally upload JD
-  -> Role/JD competency extraction
+  -> Detect or select approved target role
+  -> Student confirms role
+  -> Upload resume
+  -> Role/JD competency extraction (JD-specific when supplied)
   -> Resume claim extraction
   -> Competency-constrained adaptive mock interview
   -> Video answers
@@ -131,7 +132,7 @@ Student
 
 ### Role/JD matching
 
-The system should use the target role and optional JD to create an assessment profile, not to decide whether a resume is accepted.
+The system should use the confirmed target role and optional JD to create an assessment profile, not to decide whether a resume is accepted. If no JD is supplied, use the approved role template. If a JD is supplied, map it only to an approved role and adapt the interview using its approved skills and competency-weight adjustments.
 
 Example: Junior Backend Developer
 
@@ -292,7 +293,7 @@ Avoid naming a score "Emotion Score." The system has no reliable emotion ground 
 
 ### Readiness formula
 
-For the Junior Backend Developer first release:
+For the Junior Backend Developer research-validation template:
 
 ```text
 PlacementReadiness =
@@ -336,8 +337,8 @@ For 10–12 weeks, use PostgreSQL tables or JSONB for graph records plus a graph
 
 ### Interview procedure
 
-1. Load the approved role rubric.
-2. Parse resume and optional JD into normalized skills/claims.
+1. Map an optional JD to an approved role, or use the selected approved role when no JD is supplied; then have the student confirm the role.
+2. Load the confirmed role rubric and parse the resume; when a JD is supplied, apply its approved skills and competency-weight adjustments to the interview profile.
 3. Select one core question for the highest-priority uncovered competency.
 4. Record/upload the student's answer.
 5. Run transcript, feature extraction, base-model inference, rubric matching, and graph update.
@@ -352,7 +353,7 @@ For 10–12 weeks, use PostgreSQL tables or JSONB for graph records plus a graph
 - maximum 1 follow-up each;
 - maximum 10–12 questions;
 - 60–120 seconds per answer;
-- one initial assessment role only.
+- one confirmed catalog role per assessment.
 
 ### Follow-up trigger
 

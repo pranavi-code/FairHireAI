@@ -1,0 +1,192 @@
+{
+  "schema_version": "competency-library-v1",
+  "competencies": [
+    {
+      "competency_id": "frontend_engineering",
+      "name": "Frontend Engineering",
+      "base_weight": 0.2,
+      "description": "Builds maintainable component-based interfaces with predictable state, data fetching, validation, and performance.",
+      "approved_skill_terms": ["react", "vue", "angular", "typescript", "javascript", "html", "css", "state management", "responsive design", "web performance", "component testing"],
+      "rubric_criteria": ["decomposes interfaces into cohesive components", "manages local and server state explicitly", "handles loading, empty, success, and error states", "measures and improves user-visible performance"],
+      "core_question": {
+        "question_id": "fe_core_01",
+        "prompt": "Design a frontend page that loads, filters, and edits a list of records from an API. Explain component boundaries, state, validation, loading and error behaviour, and how you would test it.",
+        "expected_evidence": ["component boundaries", "state ownership", "API lifecycle", "validation", "testing"]
+      },
+      "follow_ups": [
+        {"question_id": "fe_follow_01", "trigger_criterion": "state_management", "prompt": "Which state belongs in the URL, server cache, and local component, and why?"},
+        {"question_id": "fe_follow_02", "trigger_criterion": "performance", "prompt": "How would you find and fix unnecessary renders or slow list rendering?"}
+      ]
+    },
+    {
+      "competency_id": "web_accessibility",
+      "name": "Web Accessibility and UX Quality",
+      "base_weight": 0.15,
+      "description": "Creates keyboard-accessible, semantic, responsive interfaces with understandable feedback and inclusive interaction.",
+      "approved_skill_terms": ["accessibility", "wcag", "aria", "semantic html", "keyboard navigation", "screen reader", "responsive", "usability", "design system", "cross browser"],
+      "rubric_criteria": ["uses semantic controls before ARIA", "supports keyboard and visible focus", "associates labels, errors, and status messages", "tests responsive and assistive-technology behaviour"],
+      "core_question": {
+        "question_id": "a11y_core_01",
+        "prompt": "A form looks correct with a mouse but is difficult to use with a keyboard and screen reader. Explain how you would audit it, prioritize fixes, and verify accessibility.",
+        "expected_evidence": ["semantic HTML", "keyboard flow", "focus management", "labels and errors", "verification"]
+      },
+      "follow_ups": [
+        {"question_id": "a11y_follow_01", "trigger_criterion": "focus_management", "prompt": "After a failed submission, where should focus move and how should errors be announced?"},
+        {"question_id": "a11y_follow_02", "trigger_criterion": "verification", "prompt": "Which automated and manual checks would you combine?"}
+      ]
+    },
+    {
+      "competency_id": "data_analysis_sql",
+      "name": "Data Analysis and SQL",
+      "base_weight": 0.25,
+      "description": "Transforms questions into reliable SQL analysis while checking data quality, grain, joins, and reproducibility.",
+      "approved_skill_terms": ["sql", "excel", "python", "pandas", "power query", "data cleaning", "data analysis", "joins", "cte", "window functions", "etl"],
+      "rubric_criteria": ["defines metric and table grain before querying", "uses joins and aggregation without duplication", "checks missing, invalid, and outlier values", "makes the analysis reproducible"],
+      "core_question": {
+        "question_id": "da_core_01",
+        "prompt": "You are asked why monthly active users dropped. Explain the data you need, SQL approach, quality checks, segmentation, and how you would communicate whether the drop is real.",
+        "expected_evidence": ["metric definition", "grain", "SQL plan", "quality checks", "segmentation", "conclusion limits"]
+      },
+      "follow_ups": [
+        {"question_id": "da_follow_01", "trigger_criterion": "join_correctness", "prompt": "How would you prevent a one-to-many join from inflating the user count?"},
+        {"question_id": "da_follow_02", "trigger_criterion": "data_quality", "prompt": "Which checks distinguish a product change from a tracking failure?"}
+      ]
+    },
+    {
+      "competency_id": "statistics_reasoning",
+      "name": "Statistical Reasoning",
+      "base_weight": 0.2,
+      "description": "Uses descriptive statistics, uncertainty, sampling, and experiment reasoning without overstating causal conclusions.",
+      "approved_skill_terms": ["statistics", "probability", "hypothesis testing", "a/b testing", "confidence interval", "regression", "sampling", "correlation", "causation"],
+      "rubric_criteria": ["chooses a measure appropriate to the distribution", "explains uncertainty and sampling limits", "distinguishes correlation from causation", "defines practical as well as statistical significance"],
+      "core_question": {
+        "question_id": "stats_core_01",
+        "prompt": "An A/B test reports a small conversion increase. Explain how you would assess experiment validity, uncertainty, practical importance, and whether to recommend rollout.",
+        "expected_evidence": ["hypothesis", "sample validity", "confidence", "effect size", "decision trade-off"]
+      },
+      "follow_ups": [
+        {"question_id": "stats_follow_01", "trigger_criterion": "causality", "prompt": "What threats could make the observed difference non-causal?"},
+        {"question_id": "stats_follow_02", "trigger_criterion": "practical_significance", "prompt": "When can a statistically significant result still be a poor product decision?"}
+      ]
+    },
+    {
+      "competency_id": "data_visualization",
+      "name": "Data Visualization and Communication",
+      "base_weight": 0.15,
+      "description": "Selects truthful visual encodings and communicates findings, uncertainty, and actions to the intended audience.",
+      "approved_skill_terms": ["power bi", "tableau", "looker", "matplotlib", "seaborn", "dashboard", "data visualization", "storytelling", "kpi"],
+      "rubric_criteria": ["matches chart form to the analytical question", "uses scales and labels without distortion", "separates observation from interpretation", "connects findings to an audience-relevant action"],
+      "core_question": {
+        "question_id": "viz_core_01",
+        "prompt": "Design a dashboard for placement coordinators to understand student mock-interview participation and improvement. Explain metrics, charts, filters, caveats, and the decisions it supports.",
+        "expected_evidence": ["audience", "metric definitions", "chart choices", "filters", "caveats", "actions"]
+      },
+      "follow_ups": [
+        {"question_id": "viz_follow_01", "trigger_criterion": "chart_choice", "prompt": "Which chart would you use for change across repeated attempts and why?"},
+        {"question_id": "viz_follow_02", "trigger_criterion": "misleading_encoding", "prompt": "How would you prevent the dashboard from exaggerating small changes?"}
+      ]
+    },
+    {
+      "competency_id": "ml_fundamentals",
+      "name": "Machine Learning Fundamentals",
+      "base_weight": 0.2,
+      "description": "Frames prediction problems, prepares data, selects suitable baselines, and recognizes leakage, imbalance, and overfitting.",
+      "approved_skill_terms": ["machine learning", "scikit-learn", "pytorch", "tensorflow", "classification", "regression", "feature engineering", "data leakage", "overfitting", "class imbalance"],
+      "rubric_criteria": ["defines inputs, target, unit of prediction, and constraints", "creates a meaningful baseline", "prevents train-test leakage", "connects model choice to data and operational needs"],
+      "core_question": {
+        "question_id": "ml_core_01",
+        "prompt": "You need to predict whether a support ticket will miss its response-time target. Explain problem framing, dataset construction, leakage prevention, baseline, features, and validation.",
+        "expected_evidence": ["target definition", "prediction time", "split strategy", "baseline", "leakage controls"]
+      },
+      "follow_ups": [
+        {"question_id": "ml_follow_01", "trigger_criterion": "leakage", "prompt": "Give one feature that would leak future information and explain why."},
+        {"question_id": "ml_follow_02", "trigger_criterion": "baseline", "prompt": "What simple baseline must the model outperform?"}
+      ]
+    },
+    {
+      "competency_id": "model_evaluation",
+      "name": "Model Evaluation and Responsible ML",
+      "base_weight": 0.2,
+      "description": "Chooses decision-relevant metrics, evaluates slices and uncertainty, and documents limitations and responsible-use boundaries.",
+      "approved_skill_terms": ["precision", "recall", "f1", "roc auc", "rmse", "cross validation", "fairness", "bias", "explainability", "model monitoring"],
+      "rubric_criteria": ["chooses metrics based on error costs", "evaluates relevant data slices", "reports uncertainty and limitations", "defines monitoring and non-use boundaries"],
+      "core_question": {
+        "question_id": "eval_core_01",
+        "prompt": "A classifier has high accuracy but misses many important positive cases. Explain how you would evaluate it, select a threshold, inspect subgroup performance, and report limitations.",
+        "expected_evidence": ["confusion matrix", "error costs", "threshold", "slice analysis", "limitations"]
+      },
+      "follow_ups": [
+        {"question_id": "eval_follow_01", "trigger_criterion": "metric_choice", "prompt": "When would recall matter more than precision in this problem?"},
+        {"question_id": "eval_follow_02", "trigger_criterion": "fairness", "prompt": "How would you investigate a large performance gap between legitimate evaluation slices?"}
+      ]
+    },
+    {
+      "competency_id": "ml_engineering",
+      "name": "ML Engineering",
+      "base_weight": 0.2,
+      "description": "Builds reproducible training and inference pipelines with versioned data, models, validation, and monitoring.",
+      "approved_skill_terms": ["mlops", "model serving", "fastapi", "docker", "mlflow", "dvc", "feature store", "pipeline", "checkpoint", "inference", "deployment"],
+      "rubric_criteria": ["versions code, configuration, data references, and checkpoints", "keeps preprocessing consistent between training and inference", "validates inputs and fails safely", "monitors data quality, latency, and model behaviour"],
+      "core_question": {
+        "question_id": "mle_core_01",
+        "prompt": "Turn a trained model notebook into a reliable prediction service. Explain artifact versioning, preprocessing parity, API validation, deployment, monitoring, and rollback.",
+        "expected_evidence": ["reproducibility", "preprocessing parity", "input contract", "monitoring", "rollback"]
+      },
+      "follow_ups": [
+        {"question_id": "mle_follow_01", "trigger_criterion": "preprocessing_parity", "prompt": "How would you guarantee that training and inference use the same transformations?"},
+        {"question_id": "mle_follow_02", "trigger_criterion": "rollback", "prompt": "What artifacts and metadata are required to restore the previous model safely?"}
+      ]
+    },
+    {
+      "competency_id": "cloud_platform",
+      "name": "Cloud and Platform Fundamentals",
+      "base_weight": 0.2,
+      "description": "Designs a small secure cloud deployment with suitable compute, networking, storage, identity, and cost awareness.",
+      "approved_skill_terms": ["aws", "azure", "gcp", "cloud", "iam", "vpc", "networking", "load balancer", "object storage", "terraform", "infrastructure as code"],
+      "rubric_criteria": ["selects services from stated requirements", "uses least-privilege identity and secret handling", "explains network and data flow", "considers availability, observability, and cost"],
+      "core_question": {
+        "question_id": "cloud_core_01",
+        "prompt": "Deploy a small web API and database for university users in the cloud. Explain compute, networking, secrets, storage, backups, monitoring, and cost controls.",
+        "expected_evidence": ["architecture", "network path", "identity", "backups", "monitoring", "cost"]
+      },
+      "follow_ups": [
+        {"question_id": "cloud_follow_01", "trigger_criterion": "security", "prompt": "How would the application receive database credentials without committing a secret?"},
+        {"question_id": "cloud_follow_02", "trigger_criterion": "availability", "prompt": "Which failure would you design for first and how?"}
+      ]
+    },
+    {
+      "competency_id": "cicd_automation",
+      "name": "CI/CD and Automation",
+      "base_weight": 0.2,
+      "description": "Automates repeatable build, test, security-check, release, and rollback workflows with controlled promotion.",
+      "approved_skill_terms": ["ci/cd", "github actions", "gitlab ci", "jenkins", "pipeline", "automation", "deployment", "blue green", "canary", "rollback"],
+      "rubric_criteria": ["defines fast and reliable quality gates", "keeps build artifacts immutable across environments", "separates approval from execution", "provides safe deployment and rollback"],
+      "core_question": {
+        "question_id": "cicd_core_01",
+        "prompt": "Design a CI/CD pipeline for a containerized API. Explain triggers, tests, security checks, artifact handling, environment promotion, deployment verification, and rollback.",
+        "expected_evidence": ["triggers", "quality gates", "immutable artifact", "promotion", "verification", "rollback"]
+      },
+      "follow_ups": [
+        {"question_id": "cicd_follow_01", "trigger_criterion": "artifact_integrity", "prompt": "Why should production use the exact artifact tested in staging?"},
+        {"question_id": "cicd_follow_02", "trigger_criterion": "rollback", "prompt": "Which signal should automatically stop or reverse a deployment?"}
+      ]
+    },
+    {
+      "competency_id": "observability_reliability",
+      "name": "Containers, Observability, and Reliability",
+      "base_weight": 0.2,
+      "description": "Packages services consistently and uses logs, metrics, traces, health checks, and incident practice to operate them reliably.",
+      "approved_skill_terms": ["docker", "kubernetes", "containers", "prometheus", "grafana", "logging", "metrics", "tracing", "observability", "sre", "incident response"],
+      "rubric_criteria": ["builds minimal reproducible container images", "distinguishes readiness from liveness", "uses logs, metrics, and traces for different questions", "defines actionable alerts and incident verification"],
+      "core_question": {
+        "question_id": "obs_core_01",
+        "prompt": "A containerized service becomes slow and sometimes restarts. Explain how you would use health checks, logs, metrics, traces, resource limits, and a safe fix verification.",
+        "expected_evidence": ["symptom scope", "health checks", "telemetry", "resource diagnosis", "safe verification"]
+      },
+      "follow_ups": [
+        {"question_id": "obs_follow_01", "trigger_criterion": "health_checks", "prompt": "What is the difference between liveness and readiness, and how can a wrong check cause an outage?"},
+        {"question_id": "obs_follow_02", "trigger_criterion": "alerting", "prompt": "Which alert would be actionable before users report the problem?"}
+      ]
+    }
+  ]
+}
