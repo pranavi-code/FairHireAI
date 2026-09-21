@@ -34,7 +34,7 @@ class RestrictedUnpickler(pickle.Unpickler):
             raise pickle.UnpicklingError(f"Forbidden global: {module}.{name}")
         return ALLOWED_GLOBALS[key]
 
-    def persistent_load(self, pid):
+    def persistent_load(self, _pid):
         raise pickle.UnpicklingError("Persistent IDs are forbidden")
 
 

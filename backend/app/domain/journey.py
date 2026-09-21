@@ -96,6 +96,8 @@ class ReportCompetencyScore(BaseModel):
     competency_id: str
     name: str
     score: float | None = Field(default=None, ge=0.0, le=1.0)
+    coverage: float = Field(default=0.0, ge=0.0, le=1.0)
+    sufficient_evidence: bool = False
     weight: float = Field(ge=0.0, le=1.0)
     evidence_node_ids: list[str] = Field(default_factory=list)
     insufficiency_reasons: list[str] = Field(default_factory=list)
@@ -131,6 +133,8 @@ class EvidenceNodeView(BaseModel):
     confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     signal_quality: str | None = None
     model_reference: str | None = None
+    criterion_evidence: list[dict[str, object]] = Field(default_factory=list)
+    missing_concepts: list[str] = Field(default_factory=list)
     skill_gap: SkillGapEvidenceView | None = None
 
 
@@ -173,6 +177,9 @@ class ProgressAttempt(BaseModel):
     role_id: str
     completed_at: datetime
     placement_readiness: float | None
+    sufficient_evidence: bool = False
+    overall_evidence_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    insufficiency_reasons: list[str] = Field(default_factory=list)
     competency_scores: list[ReportCompetencyScore]
 
 

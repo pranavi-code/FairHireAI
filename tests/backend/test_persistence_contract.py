@@ -166,3 +166,45 @@ def test_processing_rpc_qualifies_columns_that_collide_with_output_names() -> No
     assert "where a.id = p_attempt_id" in migration
     assert "set search_path = ''" in migration
     assert "from public, anon" in migration
+
+
+def test_authenticated_table_privileges_make_worker_outputs_read_only() -> None:
+    migration = Path(
+        "deployment/supabase/migrations/0016_authenticated_table_privilege_hardening.sql"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "revoke all privileges on all tables in schema public from anon, authenticated"
+        in migration
+    )
+    assert "grant select on table" in migration
+    assert "public.evidence_nodes" in migration
+    assert "public.scorecards" in migration
+    assert "public.roadmap_items" in migration
+    assert (
+        "grant insert on table public.consent_records, public.deletion_requests "
+        "to authenticated"
+        in migration
+    )
+    assert "grant all privileges on all tables in schema public to service_role" in migration
+
+
+def test_authenticated_report_rpc_is_atomic_consent_gated_and_least_privilege() -> None:
+    migration = Path(
+        "deployment/supabase/migrations/0017_authenticated_report_enqueue_rpc.sql"
+    ).read_text(encoding="utf-8")
+
+    assert "create or replace function public.request_attempt_report" in migration
+    assert "security definer" in migration
+    assert "set search_path = ''" in migration
+    assert "a.user_id = caller_id" in migration
+    assert "At least 6 evaluated answers" in migration
+    assert "external_ai_processing" in migration
+    assert "for update" in migration
+    assert "on conflict (idempotency_key) do nothing" in migration
+    assert "existing_job.attempt_count >= existing_job.max_attempts" in migration
+    assert "from public, anon" in migration
+    assert "to authenticated, service_role" in migration
+    assert "resume_documents_require_consent" in migration
+    assert "answers_require_recording_consent" in migration
+    assert "processing_jobs_require_external_ai_consent" in migration

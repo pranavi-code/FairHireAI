@@ -4,8 +4,8 @@
 `ROLEREADY_*` values through the hosting platform's secret/environment manager.
 Never bake `.env` into the image.
 
-The selected checkpoint is external to Git. A deployment must mount or download
-the verified checkpoint and set:
+The selected checkpoint is external to Git. Only the trusted worker must mount
+or download the verified checkpoint and set:
 
 ```text
 ROLEREADY_MODEL_CHECKPOINT_PATH

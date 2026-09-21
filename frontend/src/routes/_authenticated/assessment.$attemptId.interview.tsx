@@ -14,7 +14,7 @@ import {
   SafetyDisclaimer,
 } from "@/components/app/StateViews";
 import { attemptsApi } from "@/lib/api/endpoints";
-import type { PersistedInterviewQuestion } from "@/lib/api/types";
+import type { NextQuestionResponse, PersistedInterviewQuestion } from "@/lib/api/types";
 import { ApiError, isUnavailable } from "@/lib/api/errors";
 import { readConsentUiCache } from "@/lib/auth";
 import {
@@ -80,7 +80,7 @@ function InterviewPage() {
     );
   }
 
-  const question = nextQ.data?.question ?? null;
+  const question = resolveCurrentQuestion(nextQ.data, nextQ.isError);
 
   return (
     <>
@@ -88,16 +88,6 @@ function InterviewPage() {
         eyebrow="Step 4 · Interview"
         title="Interview studio"
         description="Focused recording studio. Questions and follow-ups are supplied by the backend — nothing is generated in your browser."
-        actions={
-          <Button
-            variant="outline"
-            className="rounded-full"
-            onClick={() => startProcessing.mutate()}
-            disabled={startProcessing.isPending}
-          >
-            {startProcessing.isPending ? "Submitting…" : "Finish and process"}
-          </Button>
-        }
       />
       <PageBody>
         {attempt.isPending ? (
@@ -158,8 +148,10 @@ function InterviewPage() {
                   <p>
                     Status: <Badge variant="secondary">{attempt.data?.status ?? "unknown"}</Badge>
                   </p>
-                  {nextQ.data?.message && <p className="text-xs">{nextQ.data.message}</p>}
-                  {nextQ.data && !nextQ.data.awaiting_answer && question && (
+                  {nextQ.isSuccess && nextQ.data?.message && (
+                    <p className="text-xs">{nextQ.data.message}</p>
+                  )}
+                  {nextQ.isSuccess && nextQ.data && !nextQ.data.awaiting_answer && question && (
                     <p className="text-xs">Backend indicates no answer is currently expected.</p>
                   )}
                 </CardContent>
@@ -173,7 +165,16 @@ function InterviewPage() {
   );
 }
 
-function QuestionHeader({ question }: { question: PersistedInterviewQuestion }) {
+export function resolveCurrentQuestion(
+  data: NextQuestionResponse | undefined,
+  requestFailed: boolean,
+): PersistedInterviewQuestion | null {
+  // TanStack Query retains the last successful payload when a refetch fails.
+  // Never let that stale question remain recordable beneath an error state.
+  return requestFailed ? null : (data?.question ?? null);
+}
+
+export function QuestionHeader({ question }: { question: PersistedInterviewQuestion }) {
   return (
     <div className="flex items-start gap-4">
       <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[image:var(--gradient-primary)] text-primary-foreground shadow-elegant">
@@ -188,9 +189,6 @@ function QuestionHeader({ question }: { question: PersistedInterviewQuestion }) 
         <p className="mt-3 text-lg font-semibold leading-relaxed text-foreground">
           {question.prompt_snapshot}
         </p>
-        {question.selection_reason && (
-          <p className="mt-2 text-xs text-muted-foreground">Why: {question.selection_reason}</p>
-        )}
       </div>
     </div>
   );

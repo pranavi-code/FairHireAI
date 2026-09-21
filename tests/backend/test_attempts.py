@@ -16,9 +16,15 @@ from backend.app.domain.attempts import (
     JobDescriptionSubmission,
     validate_attempt_transition,
 )
+from backend.app.domain.journey import ResumeAttachmentRequest
+from backend.app.domain.resume import ResumeClaim, ResumeEvidence, SourceSpan
 from backend.app.domain.roles import build_assessment_profile
 from backend.app.main import app
-from backend.app.repositories.supabase import SupabaseAttemptRepository
+from backend.app.repositories.supabase import (
+    SupabaseAttemptRepository,
+    SupabaseRepositoryError,
+    persisted_resume_claim_id,
+)
 
 
 class CapturingAttemptRepository:
@@ -275,6 +281,191 @@ def test_supabase_repository_persists_supplied_jd_profile() -> None:
     mapping = seen_rpc_payload["p_mapping_result"]
     assert isinstance(mapping, dict)
     assert mapping["mapping_version"] == "optional-jd-mapper-v2"
+
+
+def test_resume_claim_ids_are_stable_per_attempt_and_unique_across_attempts() -> None:
+    extractor_claim_id = "resume_skill_shared_document_claim"
+    first_attempt = uuid4()
+    second_attempt = uuid4()
+
+    first_id = persisted_resume_claim_id(first_attempt, extractor_claim_id)
+
+    assert first_id == persisted_resume_claim_id(first_attempt, extractor_claim_id)
+    assert first_id != persisted_resume_claim_id(second_attempt, extractor_claim_id)
+    assert len(first_id) <= 80
+
+
+def test_attach_resume_sends_attempt_scoped_claim_ids() -> None:
+    attempt_id = uuid4()
+    document_id = uuid4()
+    extractor_claim_id = "resume_skill_shared_document_claim"
+    seen_payloads: list[dict[str, object]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/rest/v1/rpc/attach_resume_evidence"
+        seen_payloads.append(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "resume_document_id": str(document_id),
+                    "attempt_id": str(attempt_id),
+                    "claim_count": 1,
+                    "extraction_status": "complete",
+                }
+            ],
+        )
+
+    evidence = ResumeEvidence(
+        document_sha256="a" * 64,
+        extractor_name="test-extractor",
+        extractor_version="1.0.0",
+        claims=[
+            ResumeClaim(
+                claim_id=extractor_claim_id,
+                claim_type="skill",
+                normalized_text="Python",
+                source=SourceSpan(
+                    page=1,
+                    start_character=7,
+                    end_character=13,
+                    source_text="Python",
+                ),
+                confidence=0.94,
+                normalized_skills=["python"],
+            )
+        ],
+    )
+    request = ResumeAttachmentRequest(
+        private_resume_storage_key=f"user/attempts/{attempt_id}/resume.pdf",
+        mime_type="application/pdf",
+        evidence=evidence,
+    )
+    repository = SupabaseAttemptRepository(
+        base_url="https://example.supabase.co",
+        publishable_key="publishable-key",
+        access_token="user-jwt",
+        transport=httpx.MockTransport(handler),
+    )
+    try:
+        first_result = repository.attach_resume(attempt_id, request)
+        second_result = repository.attach_resume(attempt_id, request)
+    finally:
+        repository.close()
+
+    expected_id = persisted_resume_claim_id(attempt_id, extractor_claim_id)
+    assert first_result.resume_document_id == document_id
+    assert second_result.resume_document_id == document_id
+    assert len(seen_payloads) == 2
+    assert seen_payloads[0]["p_claims"][0]["id"] == expected_id  # type: ignore[index]
+    assert seen_payloads[1]["p_claims"][0]["id"] == expected_id  # type: ignore[index]
+
+
+def test_processing_retry_is_blocked_after_the_persisted_limit() -> None:
+    attempt_id = uuid4()
+    job_id = uuid4()
+    answer_id = uuid4()
+    now = datetime.now(timezone.utc).isoformat()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path == "/rest/v1/processing_jobs"
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "id": str(job_id),
+                    "attempt_id": str(attempt_id),
+                    "answer_id": str(answer_id),
+                    "job_type": "answer_preprocessing",
+                    "status": "failed",
+                    "stage": "failed",
+                    "attempt_count": 3,
+                    "max_attempts": 3,
+                    "error_code": "RuntimeError",
+                    "error_detail": "persisted failure",
+                    "queued_at": now,
+                    "started_at": now,
+                    "finished_at": now,
+                    "updated_at": now,
+                }
+            ],
+        )
+
+    repository = SupabaseAttemptRepository(
+        base_url="https://example.supabase.co",
+        publishable_key="publishable-key",
+        access_token="user-jwt",
+        transport=httpx.MockTransport(handler),
+    )
+    try:
+        with pytest.raises(SupabaseRepositoryError, match="retry limit") as raised:
+            repository.enqueue_processing(attempt_id)
+    finally:
+        repository.close()
+
+    assert raised.value.status_code == 409
+
+
+def test_report_generation_uses_authenticated_validated_rpc() -> None:
+    attempt_id = uuid4()
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        assert request.method == "POST"
+        assert request.url.path == "/rest/v1/rpc/request_attempt_report"
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "attempt_id": str(attempt_id),
+                    "started": True,
+                    "queued_job_count": 1,
+                    "message": "Evidence-backed report generation queued.",
+                }
+            ],
+        )
+
+    repository = SupabaseAttemptRepository(
+        base_url="https://example.supabase.co",
+        publishable_key="publishable-key",
+        access_token="user-jwt",
+        transport=httpx.MockTransport(handler),
+    )
+    try:
+        result = repository.request_report_generation(attempt_id)
+    finally:
+        repository.close()
+
+    assert result.attempt_id == attempt_id
+    assert result.queued_job_count == 1
+    assert json.loads(seen[0].content) == {"p_attempt_id": str(attempt_id)}
+    assert seen[0].headers["authorization"] == "Bearer user-jwt"
+
+
+def test_report_generation_maps_database_validation_failure_to_conflict() -> None:
+    attempt_id = uuid4()
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            400,
+            json={"message": "At least 6 evaluated answers are required"},
+        )
+
+    repository = SupabaseAttemptRepository(
+        base_url="https://example.supabase.co",
+        publishable_key="publishable-key",
+        access_token="user-jwt",
+        transport=httpx.MockTransport(handler),
+    )
+    try:
+        with pytest.raises(SupabaseRepositoryError, match="At least 6") as raised:
+            repository.request_report_generation(attempt_id)
+    finally:
+        repository.close()
+
+    assert raised.value.status_code == 409
 
 
 def test_attempt_api_fails_closed_without_supabase_configuration(

@@ -108,6 +108,10 @@ export const attemptsApi = {
     apiRequest<StartProcessingResponse>(`/api/v1/attempts/${attemptId}/process`, {
       method: "POST",
     }),
+  finishInterview: (attemptId: string) =>
+    apiRequest<StartProcessingResponse>(`/api/v1/attempts/${attemptId}/finish`, {
+      method: "POST",
+    }),
   jobs: (attemptId: string, signal?: AbortSignal) =>
     apiRequest<ProcessingJobView[]>(`/api/v1/attempts/${attemptId}/jobs`, { signal }),
   report: (attemptId: string) => apiRequest<ReportResponse>(`/api/v1/attempts/${attemptId}/report`),

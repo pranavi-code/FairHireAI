@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
+from backend.app.api.dependencies import authenticated_user_id
 from backend.app.domain.interviews import (
     CompetencyProgress,
     NextQuestionRequest,
@@ -129,22 +130,26 @@ def test_resume_evidence_requires_traceable_source_and_unique_ids() -> None:
 
 
 def test_resume_and_question_endpoints_use_the_validated_domain_contracts() -> None:
-    evidence_response = client.post(
-        "/api/v1/resume-evidence/validate",
-        json={
-            "document_sha256": "b" * 64,
-            "extractor_name": "resume-parser",
-            "extractor_version": "1.0.0",
-            "claims": [],
-        },
-    )
-    assert evidence_response.status_code == 200
-    assert evidence_response.json()["claim_count"] == 0
+    app.dependency_overrides[authenticated_user_id] = uuid4
+    try:
+        evidence_response = client.post(
+            "/api/v1/resume-evidence/validate",
+            json={
+                "document_sha256": "b" * 64,
+                "extractor_name": "resume-parser",
+                "extractor_version": "1.0.0",
+                "claims": [],
+            },
+        )
+        assert evidence_response.status_code == 200
+        assert evidence_response.json()["claim_count"] == 0
 
-    request = request_with_progress([])
-    question_response = client.post(
-        "/api/v1/interviews/next-question",
-        json=request.model_dump(mode="json"),
-    )
-    assert question_response.status_code == 200
-    assert question_response.json()["question_id"] == "pf_core_01"
+        request = request_with_progress([])
+        question_response = client.post(
+            "/api/v1/interviews/next-question",
+            json=request.model_dump(mode="json"),
+        )
+        assert question_response.status_code == 200
+        assert question_response.json()["question_id"] == "pf_core_01"
+    finally:
+        app.dependency_overrides.pop(authenticated_user_id, None)

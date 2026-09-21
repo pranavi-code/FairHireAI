@@ -4,18 +4,19 @@ The student frontend is hosted by Lovable, authentication/private storage and
 PostgreSQL are hosted by Supabase, and this directory packages the FastAPI and
 model-inference boundary.
 
-Copy `.env.example` to `.env`, set the Supabase public project values and CORS
-origins, then run:
+Copy `deployment/backend.env.example` to `deployment/backend.env`, set the
+Supabase public project values, Gemini key, external-worker declaration, and
+CORS origin, then run:
 
 ```powershell
 docker compose -f deployment/docker-compose.yml up --build
 ```
 
 The container exposes `/api/v1/health`, `/api/v1/capabilities`, and OpenAPI at
-`/openapi.json`. Set the three `ROLEREADY_MODEL_*` values only after training
-produces a verified checkpoint. Mount its directory read-only through
-`FAIRHIRE_MODEL_DIR`; never bake a private checkpoint or dataset into the
-image.
+`/openapi.json`. The public API does not need the private checkpoint or
+Supabase server secret. It may enqueue jobs only after
+`ROLEREADY_TRUSTED_WORKER_AVAILABLE=true` declares that the separate worker has
+passed its own deployment preflight.
 
 `POST /api/v1/attempts/{id}/process` fails closed until those checkpoint
 settings verify a real file. Once configured, it uses the authenticated,
@@ -26,3 +27,6 @@ pretends that queueing is completed inference.
 For a hosted Lovable preview, deploy this container to a public HTTPS service
 and set its URL as `VITE_API_BASE_URL`. A browser-hosted frontend cannot use a
 private laptop-only `localhost` backend.
+
+Follow `PRODUCTION_RUNBOOK.md` for the complete API, worker, frontend, Auth,
+secret-separation, and release-verification sequence.

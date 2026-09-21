@@ -8,6 +8,7 @@ __pycache__/
 .coverage.*
 coverage.xml
 htmlcov/
+coverage/
 .hypothesis/
 .ipynb_checkpoints/
 .venv/
@@ -34,6 +35,7 @@ frontend/.wrangler/
 .env
 .env.*
 !.env.example
+deployment/*.env
 *.key
 *.pem
 *.pfx
@@ -79,6 +81,7 @@ Thumbs.db
 .vscode/
 .idea/
 .codex/
+.codex-tmp/
 .agents/
 *.log
 *.pid

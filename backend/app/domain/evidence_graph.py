@@ -185,7 +185,7 @@ class ScorecardRequest(BaseModel):
 
 class CompetencyScore(BaseModel):
     competency_id: str
-    score: float = Field(ge=0.0, le=1.0)
+    score: float | None = Field(default=None, ge=0.0, le=1.0)
     coverage: float = Field(ge=0.0, le=1.0)
     sufficient_evidence: bool
 
@@ -265,26 +265,40 @@ def calculate_scorecard(
     if missing:
         raise ValueError(f"Scorecard evidence references missing nodes: {sorted(missing)}")
 
-    competency_scores = [
-        CompetencyScore(
-            competency_id=competency.competency_id,
-            score=round(
-                float(request.evidence.competency_rubric_scores[competency.competency_id].value),
-                6,
-            ),
-            coverage=round(
-                float(request.evidence.competency_coverage[competency.competency_id].value),
-                6,
-            ),
-            sufficient_evidence=(
-                float(request.evidence.competency_coverage[competency.competency_id].value) >= 0.70
-            ),
+    competency_scores: list[CompetencyScore] = []
+    for competency in role.competencies:
+        score_metric = request.evidence.competency_rubric_scores[
+            competency.competency_id
+        ]
+        coverage_metric = request.evidence.competency_coverage[
+            competency.competency_id
+        ]
+        score = round(float(score_metric.value), 6) if score_metric.applicable else None
+        coverage = (
+            round(float(coverage_metric.value), 6)
+            if coverage_metric.applicable
+            else 0.0
         )
-        for competency in role.competencies
-    ]
-    technical_rubric_match = sum(
-        request.competency_weights[item.competency_id] * item.score for item in competency_scores
+        competency_scores.append(
+            CompetencyScore(
+                competency_id=competency.competency_id,
+                score=score,
+                coverage=coverage,
+                sufficient_evidence=(score is not None and coverage >= 0.70),
+            )
+        )
+
+    assessed_competencies = [item for item in competency_scores if item.score is not None]
+    if not assessed_competencies:
+        raise ValueError("At least one assessed competency is required")
+    assessed_weight = sum(
+        request.competency_weights[item.competency_id]
+        for item in assessed_competencies
     )
+    technical_rubric_match = sum(
+        request.competency_weights[item.competency_id] * float(item.score)
+        for item in assessed_competencies
+    ) / assessed_weight
     # Decimal weights represented as binary floats can make an exact normalized
     # score drift just outside the schema boundary (for example,
     # 1.0000000000000002). Clamp before validating it as MetricEvidence.
@@ -298,6 +312,7 @@ def calculate_scorecard(
                     evidence_node_ids=[
                         node_id
                         for metric in request.evidence.competency_rubric_scores.values()
+                        if metric.applicable
                         for node_id in metric.evidence_node_ids
                     ],
                 ),
@@ -328,7 +343,11 @@ def calculate_scorecard(
     signal_quality = float(request.evidence.signal_quality.value)
     overall_confidence = evidence_confidence * signal_quality
     insufficiency_reasons = [
-        f"Insufficient evidence for {item.competency_id}"
+        (
+            f"Not assessed before interview submission: {item.competency_id}"
+            if item.score is None
+            else f"Insufficient evidence for {item.competency_id}"
+        )
         for item in competency_scores
         if not item.sufficient_evidence
     ]

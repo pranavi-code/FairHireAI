@@ -31,6 +31,7 @@ REQUIRED_CONSENTS = (
     "interview_recording",
     "external_ai_processing",
 )
+RETRYABLE_READ_STATUS_CODES = {500, 502, 503, 504}
 SYNTHETIC_RESUME = b"""FairHireAI Live Integration Candidate
 
 Summary
@@ -60,6 +61,31 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _read_with_retries(
+    client: httpx.Client,
+    path: str,
+    *,
+    attempts: int = 5,
+) -> httpx.Response:
+    """Retry idempotent live-test reads across brief DNS/TLS interruptions."""
+
+    last_error: httpx.TransportError | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            response = client.get(path)
+        except httpx.TransportError as exc:
+            last_error = exc
+        else:
+            last_error = None
+            if response.status_code not in RETRYABLE_READ_STATUS_CODES:
+                return response
+        if attempt < attempts:
+            time.sleep(float(attempt))
+    if last_error is not None:
+        raise last_error
+    return response
+
+
 def _upload(
     client: httpx.Client,
     *,
@@ -87,7 +113,10 @@ def _wait_for_answer_job(
     deadline = time.monotonic() + timeout_seconds
     last_stage = "waiting_for_worker"
     while time.monotonic() < deadline:
-        jobs = _json(api.get(f"/attempts/{attempt_id}/jobs"), "List jobs")
+        jobs = _json(
+            _read_with_retries(api, f"/attempts/{attempt_id}/jobs"),
+            "List jobs",
+        )
         job = next((item for item in jobs if item.get("answer_id") == answer_id), None)
         if job:
             stage = str(job.get("stage") or job.get("status") or "unknown")
@@ -106,7 +135,7 @@ def _wait_for_answer_job(
 
 
 def _user_exists(admin: httpx.Client, user_id: str) -> bool:
-    response = admin.get(f"/auth/v1/admin/users/{user_id}")
+    response = _read_with_retries(admin, f"/auth/v1/admin/users/{user_id}")
     if response.status_code == 404:
         return False
     _json(response, "Check disposable user")
@@ -164,11 +193,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             base_url=settings.supabase_url.rstrip("/"),
             headers=admin_headers,
             timeout=60,
+            transport=httpx.HTTPTransport(retries=3),
         ) as admin,
         httpx.Client(
             base_url=settings.supabase_url.rstrip("/"),
             headers=public_headers,
             timeout=60,
+            transport=httpx.HTTPTransport(retries=3),
         ) as public,
     ):
         try:
@@ -307,13 +338,16 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 question_count = 0
                 while question_count < 12:
                     current = _json(
-                        api.get(f"/attempts/{completed_attempt_id}"),
+                        _read_with_retries(api, f"/attempts/{completed_attempt_id}"),
                         "Read attempt",
                     )
                     if current.get("status") == "completed":
                         break
                     next_result = _json(
-                        api.get(f"/attempts/{completed_attempt_id}/next-question"),
+                        _read_with_retries(
+                            api,
+                            f"/attempts/{completed_attempt_id}/next-question",
+                        ),
                         "Request approved question",
                     )
                     question = next_result.get("question")
@@ -362,14 +396,17 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                         timeout_seconds=args.worker_timeout_seconds,
                     )
                 current = _json(
-                    api.get(f"/attempts/{completed_attempt_id}"),
+                    _read_with_retries(api, f"/attempts/{completed_attempt_id}"),
                     "Confirm interview completion",
                 )
                 if current.get("status") != "completed":
                     raise RuntimeError("Interview exceeded its hard 12-question bound")
 
                 report = _json(
-                    api.get(f"/attempts/{completed_attempt_id}/report"),
+                    _read_with_retries(
+                        api,
+                        f"/attempts/{completed_attempt_id}/report",
+                    ),
                     "Read evidence-backed report",
                 )
                 if report.get("status") != "completed" or not report.get("scorecard"):
@@ -381,7 +418,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     raise RuntimeError("Completed attempt has an invalid roadmap payload")
                 if any(item.get("reviewer_approved") is not True for item in roadmap):
                     raise RuntimeError("Roadmap contains an unapproved item")
-                progress = _json(api.get("/progress"), "Read progress")
+                progress = _json(_read_with_retries(api, "/progress"), "Read progress")
                 if completed_attempt_id not in {
                     str(item.get("attempt_id")) for item in progress.get("attempts", [])
                 }:

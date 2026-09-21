@@ -26,6 +26,8 @@ from backend.app.services.attempt_reporting import (
     build_attempt_output,
     interview_ready_for_report,
 )
+from backend.app.services.grounded_guidance import GroundedGuidanceService
+from backend.app.services.hybrid_rag import HybridRagService
 from ml_service.inference.runtime import CheckpointInferenceRuntime
 from ml_service.preprocessing.alignment import align_sample
 from ml_service.preprocessing.pipeline import (
@@ -116,6 +118,9 @@ class FairHireWorker:
 
     def _process_job(self, job: dict[str, Any]) -> None:
         job_id = str(job["id"])
+        if str(job.get("job_type")) == "report_generation":
+            self._process_report_job(job)
+            return
         answer_id = str(job["answer_id"])
         attempt_id = str(job["attempt_id"])
         work = Path(self.settings.worker_artifact_root) / "jobs" / job_id
@@ -292,6 +297,40 @@ class FairHireWorker:
             if work.is_dir():
                 shutil.rmtree(work)
 
+    def _process_report_job(self, job: dict[str, Any]) -> None:
+        job_id = str(job["id"])
+        attempt_id = str(job["attempt_id"])
+        try:
+            attempt = self.repository.attempt(attempt_id)
+            if not self.repository.external_ai_consent(
+                str(attempt["user_id"]),
+                attempt_id,
+            ):
+                raise RuntimeError(
+                    "Explicit external_ai_processing consent is required for roadmap retrieval."
+                )
+            self._stage(job_id, "build_partial_evidence_report")
+            self._finalize_report(attempt)
+            self.repository.update_job(
+                job_id,
+                status="succeeded",
+                stage="complete",
+                finished_at=datetime.now(timezone.utc).isoformat(),
+                error_code=None,
+                error_detail=None,
+            )
+        except Exception as exc:
+            self.repository.update_attempt(attempt_id, status="failed")
+            self.repository.update_job(
+                job_id,
+                status="failed",
+                stage="failed",
+                finished_at=datetime.now(timezone.utc).isoformat(),
+                error_code=type(exc).__name__[:100],
+                error_detail=str(exc)[:4_000],
+            )
+            raise
+
     def _finalize_or_continue(self, attempt: dict[str, Any]) -> None:
         attempt_id = str(attempt["id"])
         material = self.repository.attempt_material(attempt_id)
@@ -304,20 +343,56 @@ class FairHireWorker:
         if not ready:
             self.repository.update_attempt(attempt_id, status="interviewing")
             return
+        self._finalize_report(attempt)
+
+    def _finalize_report(self, attempt: dict[str, Any]) -> None:
+        attempt_id = str(attempt["id"])
+        material = self.repository.attempt_material(attempt_id)
         parent_scorecard = (
             self.repository.scorecard(str(attempt["parent_attempt_id"]))
             if attempt.get("parent_attempt_id")
             else None
         )
-        output = build_attempt_output(
-            attempt=attempt,
-            questions=material["questions"],
-            answers=material["answers"],
-            analyses=material["analyses"],
-            resume_claims=material["resume_claims"],
-            resources=self.repository.approved_resources(),
-            parent_scorecard=parent_scorecard,
-        )
+        approved_resources = self.repository.approved_resources()
+        with GeminiClient(
+            api_key=self.settings.gemini_api_key.get_secret_value(),
+            generation_model=self.settings.gemini_generation_model,
+            embedding_model=self.settings.gemini_embedding_model,
+            embedding_dimensions=self.settings.gemini_embedding_dimensions,
+            timeout_seconds=self.settings.gemini_timeout_seconds,
+            max_retries=self.settings.gemini_max_retries,
+        ) as client:
+            rag = HybridRagService(client)
+            guidance = GroundedGuidanceService(client)
+            output = build_attempt_output(
+                attempt=attempt,
+                questions=material["questions"],
+                answers=material["answers"],
+                analyses=material["analyses"],
+                resume_claims=material["resume_claims"],
+                resources=approved_resources,
+                parent_scorecard=parent_scorecard,
+                resource_retriever=lambda gaps: rag.retrieve_resources(
+                    self.repository,
+                    role_id=str(attempt["role_id"]),
+                    gaps=gaps,
+                    approved_resources=approved_resources,
+                ),
+                gap_enricher=lambda gaps, evaluations: guidance.generate_gap_guidance(
+                    role_id=str(attempt["role_id"]),
+                    gaps=gaps,
+                    evaluations=evaluations,
+                ),
+                roadmap_personalizer=lambda gaps, draft, resources, gap_guidance: (
+                    guidance.personalize_roadmap(
+                        role_id=str(attempt["role_id"]),
+                        gaps=gaps,
+                        draft=draft,
+                        resources=resources,
+                        gap_guidance=gap_guidance,
+                    )
+                ),
+            )
         self.repository.replace_attempt_outputs(
             attempt_id=attempt_id,
             nodes=output.nodes,

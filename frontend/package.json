@@ -11,7 +11,9 @@
     "preview": "vite preview --configLoader runner",
     "lint": "eslint src vite.config.ts vitest.config.ts",
     "format": "prettier --write .",
-    "test": "vitest run --configLoader runner"
+    "test": "vitest run --configLoader runner",
+    "test:coverage": "vitest run --coverage --configLoader runner",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

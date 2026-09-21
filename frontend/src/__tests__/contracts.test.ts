@@ -13,7 +13,7 @@ import {
   validateDocumentSize,
 } from "@/lib/api/endpoints";
 
-import { ApiError, parseFastApiDetail } from "@/lib/api/errors";
+import { ApiError, friendlyMessage, parseFastApiDetail } from "@/lib/api/errors";
 import type {
   AnswerRecord,
   ExtractedDocument,
@@ -518,6 +518,34 @@ describe("apiRequest — 404/501 → honest unavailable via ApiError", () => {
       job_description: REAL_JD,
       selected_role_id: "junior_backend_developer",
     });
+  });
+});
+
+describe("friendlyMessage — dynamic Gemini failures", () => {
+  it("shows the backend's safe dynamic-question explanation for a 503", () => {
+    const error = new ApiError(
+      "unavailable",
+      "Gemini responded, but three generated questions were rejected by the grounding checks.",
+      503,
+      null,
+      "dynamic_question_validation_failed",
+    );
+
+    expect(friendlyMessage(error)).toContain("three generated questions were rejected");
+  });
+
+  it("keeps unrelated 503 details hidden", () => {
+    const error = new ApiError(
+      "unavailable",
+      "internal provider detail",
+      503,
+      null,
+      "unrelated_provider_failure",
+    );
+
+    expect(friendlyMessage(error)).toBe(
+      "The service is temporarily unavailable. Please try again shortly.",
+    );
   });
 });
 

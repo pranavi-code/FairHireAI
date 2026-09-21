@@ -87,7 +87,7 @@ export interface RoleDetectionResponse {
 
 // ---------- Documents ----------
 
-export type DocumentKind = "pdf" | "docx" | "text";
+export type DocumentKind = "pdf" | "docx" | "text" | "image";
 
 export interface ExtractedPage {
   page: number | null;
@@ -355,6 +355,13 @@ export interface EvidenceNode {
   confidence?: number | null;
   signal_quality?: string | null;
   model_reference?: string | null;
+  criterion_evidence?: Array<{
+    criterion: string;
+    score: number;
+    rationale: string;
+    citations?: Array<{ text: string; start_seconds: number; end_seconds: number }>;
+  }>;
+  missing_concepts?: string[];
   skill_gap?: {
     current_score?: number | null;
     target_score?: number | null;
@@ -376,6 +383,8 @@ export interface ReportCompetencyScore {
   competency_id: string;
   name: string;
   score: number | null;
+  coverage: number;
+  sufficient_evidence: boolean;
   weight: number;
   evidence_node_ids?: string[];
   insufficiency_reasons?: string[];
@@ -436,7 +445,10 @@ export interface ProgressAttempt {
   role_id: string;
   completed_at: string;
   placement_readiness: number | null;
-  competency_scores: Array<{ competency_id: string; name?: string; score: number | null }>;
+  sufficient_evidence: boolean;
+  overall_evidence_confidence: number | null;
+  insufficiency_reasons: string[];
+  competency_scores: ReportCompetencyScore[];
   [k: string]: unknown;
 }
 

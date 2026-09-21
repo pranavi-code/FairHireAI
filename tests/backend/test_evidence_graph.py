@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
+from backend.app.api.dependencies import authenticated_user_id
 from backend.app.domain.evidence_graph import (
     EvidenceGraph,
     GraphEdge,
@@ -141,6 +142,26 @@ def test_low_signal_quality_reduces_confidence_not_capability_scores() -> None:
     assert low_quality.overall_evidence_confidence == pytest.approx(0.45)
 
 
+def test_scorecard_marks_unassessed_competencies_without_fabricating_scores() -> None:
+    request = scorecard_request()
+    missing_id = next(iter(request.evidence.competency_rubric_scores))
+    request.evidence.competency_rubric_scores[missing_id] = MetricEvidence(
+        applicable=False
+    )
+    request.evidence.competency_coverage[missing_id] = MetricEvidence(applicable=False)
+
+    result = calculate_scorecard(request)
+    missing = next(
+        item for item in result.competency_scores if item.competency_id == missing_id
+    )
+
+    assert missing.score is None
+    assert missing.coverage == 0.0
+    assert not missing.sufficient_evidence
+    assert result.placement_readiness is None
+    assert any("Not assessed" in reason for reason in result.insufficiency_reasons)
+
+
 def test_scorecard_rejects_untraceable_metric_references() -> None:
     request = scorecard_request()
     request.evidence.answer_relevance.evidence_node_ids = ["missing_evidence"]
@@ -149,10 +170,14 @@ def test_scorecard_rejects_untraceable_metric_references() -> None:
 
 
 def test_scorecard_endpoint_returns_auditable_result() -> None:
-    response = client.post(
-        "/api/v1/evidence/scorecard",
-        json=scorecard_request().model_dump(mode="json"),
-    )
+    app.dependency_overrides[authenticated_user_id] = uuid4
+    try:
+        response = client.post(
+            "/api/v1/evidence/scorecard",
+            json=scorecard_request().model_dump(mode="json"),
+        )
+    finally:
+        app.dependency_overrides.pop(authenticated_user_id, None)
     assert response.status_code == 200
     payload = response.json()
     assert payload["formula_version"] == "readiness-scorecard-v1"

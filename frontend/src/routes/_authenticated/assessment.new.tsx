@@ -100,7 +100,7 @@ function NewAssessment() {
     mutationFn: async (file: File) => {
       // Detection is performed by the backend, honouring the selected role.
       // The JD upload endpoint returns both `document` and `role_mapping`.
-      return documentsApi.jobDescription(file);
+      return documentsApi.jobDescription(file, selectedRoleId);
     },
     onSuccess: async (data, file) => {
       setJdUpload(data);
@@ -268,8 +268,8 @@ function NewAssessment() {
                 <CardHeader>
                   <CardTitle>Job description (optional)</CardTitle>
                   <CardDescription>
-                    PDF, DOCX, TXT or MD, up to 5 MiB. Extraction, detection, and weight adjustments
-                    all run on the backend.
+                    PDF (including scanned PDFs), DOCX, TXT, MD, JPG, PNG or WEBP, up to 5 MiB.
+                    Images and scanned PDFs use the configured backend OCR service.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -278,7 +278,7 @@ function NewAssessment() {
                     <Input
                       id="jd"
                       type="file"
-                      accept=".pdf,.docx,.txt,.md,application/pdf,text/plain,text/markdown"
+                      accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.webp,application/pdf,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/webp"
                       onChange={(e) => {
                         const f = e.currentTarget.files?.[0] ?? null;
                         if (!f) return;

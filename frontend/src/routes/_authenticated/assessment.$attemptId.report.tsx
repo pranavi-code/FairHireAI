@@ -21,6 +21,11 @@ import {
   SafetyDisclaimer,
 } from "@/components/app/StateViews";
 import { attemptsApi } from "@/lib/api/endpoints";
+import {
+  normalizedEvidenceKind,
+  resolveEvidenceBundles,
+  type EvidenceBundle,
+} from "@/lib/api/evidence";
 import type { EvidenceNode, ReportResponse, Scorecard } from "@/lib/api/types";
 import { ApiError, isUnavailable } from "@/lib/api/errors";
 
@@ -43,7 +48,7 @@ function ReportPage() {
     queryKey: ["report", attemptId],
     queryFn: () => attemptsApi.report(attemptId),
   });
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openIds, setOpenIds] = useState<string[]>([]);
 
   return (
     <>
@@ -67,10 +72,13 @@ function ReportPage() {
         ) : report.isError ? (
           <ErrorState error={report.error as ApiError} onRetry={() => report.refetch()} />
         ) : (
-          <ReportView data={report.data} onOpenEvidence={setOpenId} />
+          <ReportView
+            data={report.data}
+            onOpenEvidence={(ids) => setOpenIds(Array.isArray(ids) ? ids : [ids])}
+          />
         )}
 
-        <EvidenceDrawer data={report.data} openId={openId} onClose={() => setOpenId(null)} />
+        <EvidenceDrawer data={report.data} openIds={openIds} onClose={() => setOpenIds([])} />
 
         <div className="mt-10">
           <SafetyDisclaimer />
@@ -85,7 +93,7 @@ function ReportView({
   onOpenEvidence,
 }: {
   data: ReportResponse;
-  onOpenEvidence: (id: string) => void;
+  onOpenEvidence: (ids: string | string[]) => void;
 }) {
   const sc: Scorecard | null = data.scorecard ?? null;
   const readiness = sc?.placement_readiness ?? null;
@@ -175,6 +183,10 @@ function ReportView({
                         <p className="text-xs text-muted-foreground">
                           Weight {formatPct(c.weight)}
                         </p>
+                        <p className="text-xs text-muted-foreground">
+                          Evidence coverage {formatPct(c.coverage)}
+                          {!c.sufficient_evidence && " · needs at least 70%"}
+                        </p>
                       </div>
                       <div className="text-right">
                         {c.score === null || c.score === undefined ? (
@@ -194,19 +206,15 @@ function ReportView({
                       </ul>
                     )}
                     {c.evidence_node_ids && c.evidence_node_ids.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {c.evidence_node_ids.map((eid) => (
-                          <Button
-                            key={eid}
-                            variant="outline"
-                            size="sm"
-                            className="h-7 rounded-full border-evidence/40 text-evidence hover:bg-evidence/10"
-                            onClick={() => onOpenEvidence(eid)}
-                          >
-                            View evidence
-                          </Button>
-                        ))}
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 h-7 rounded-full border-evidence/40 text-evidence hover:bg-evidence/10"
+                        onClick={() => onOpenEvidence(c.evidence_node_ids ?? [])}
+                      >
+                        View evidence ({c.evidence_node_ids.length} answer
+                        {c.evidence_node_ids.length === 1 ? "" : "s"})
+                      </Button>
                     )}
                   </li>
                 ))}
@@ -240,6 +248,13 @@ function ReportView({
               <ul className="grid gap-3">
                 {skillGaps.map((gap) => {
                   const details = gap.skill_gap;
+                  const supportingEvidenceIds = data.evidence_nodes
+                    .filter(
+                      (node) =>
+                        normalizedEvidenceKind(node) === "evidenceclaim" &&
+                        node.competency_id === gap.competency_id,
+                    )
+                    .map((node) => node.id);
                   const title =
                     (gap.competency_id && competencyNames.get(gap.competency_id)) ||
                     gap.label ||
@@ -276,9 +291,16 @@ function ReportView({
                         variant="outline"
                         size="sm"
                         className="mt-3 h-8 rounded-full border-evidence/40 text-evidence hover:bg-evidence/10"
-                        onClick={() => onOpenEvidence(gap.id)}
+                        onClick={() =>
+                          onOpenEvidence(
+                            supportingEvidenceIds.length > 0 ? supportingEvidenceIds : gap.id,
+                          )
+                        }
                       >
                         View supporting evidence
+                        {supportingEvidenceIds.length > 0
+                          ? ` (${supportingEvidenceIds.length} answer${supportingEvidenceIds.length === 1 ? "" : "s"})`
+                          : ""}
                       </Button>
                     </li>
                   );
@@ -368,81 +390,36 @@ function DeliveryMetric({ label, value }: { label: string; value: string }) {
 
 function EvidenceDrawer({
   data,
-  openId,
+  openIds,
   onClose,
 }: {
   data: ReportResponse | undefined;
-  openId: string | null;
+  openIds: string[];
   onClose: () => void;
 }) {
-  const item: EvidenceNode | null =
-    (data?.evidence_nodes ?? []).find((e) => e.id === openId) ?? null;
+  const bundles = resolveEvidenceBundles(data, openIds);
   return (
-    <Sheet open={!!openId} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="w-full sm:max-w-lg">
+    <Sheet open={openIds.length > 0} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
         <SheetHeader>
           <SheetTitle>Evidence</SheetTitle>
           <SheetDescription>
-            Backend-provided artefacts for this evidence item. Missing fields are labelled
-            unavailable.
+            Questions, transcript spans, rubric findings, and model references persisted by the
+            backend for this competency.
           </SheetDescription>
         </SheetHeader>
-        <div className="mt-4 space-y-4 text-sm">
-          {!item ? (
+        <div className="mt-4 space-y-5 text-sm">
+          {bundles.length === 0 ? (
             <p className="text-muted-foreground">This evidence item is unavailable.</p>
           ) : (
-            <>
-              <EvidenceField label="Kind">{item.kind ?? "Unavailable"}</EvidenceField>
-              <EvidenceField label="Competency">
-                {item.competency_id ?? "Unavailable"}
-              </EvidenceField>
-              <EvidenceField label="Question">
-                {item.question?.prompt_snapshot ?? "Unavailable"}
-              </EvidenceField>
-              <EvidenceField label="Transcript span">
-                {item.transcript_span?.text ? (
-                  <>
-                    <span>{item.transcript_span.text}</span>
-                    {(item.transcript_span.start_ms || item.transcript_span.end_ms) && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {formatMs(item.transcript_span.start_ms)} –{" "}
-                        {formatMs(item.transcript_span.end_ms)}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  "Unavailable"
-                )}
-              </EvidenceField>
-              <EvidenceField label="Resume claim">
-                {item.resume_claim_id ?? "Unavailable"}
-              </EvidenceField>
-              <EvidenceField label="Confidence">
-                {typeof item.confidence === "number" ? formatPct(item.confidence) : "Unavailable"}
-              </EvidenceField>
-              <EvidenceField label="Signal quality">
-                {item.signal_quality ?? "Unavailable"}
-              </EvidenceField>
-              <EvidenceField label="Model reference">
-                {item.model_reference ?? "Unavailable"}
-              </EvidenceField>
-              {item.kind.replace(/[_\s-]/g, "").toLowerCase() === "skillgap" && (
-                <>
-                  <EvidenceField label="Current evidence score">
-                    {formatPct(item.skill_gap?.current_score)}
-                  </EvidenceField>
-                  <EvidenceField label="Target score">
-                    {formatPct(item.skill_gap?.target_score)}
-                  </EvidenceField>
-                  <EvidenceField label="Gap severity">
-                    {formatPct(item.skill_gap?.severity)}
-                  </EvidenceField>
-                  <EvidenceField label="Why this is a gap">
-                    {item.skill_gap?.rationale ?? "Unavailable"}
-                  </EvidenceField>
-                </>
-              )}
-            </>
+            bundles.map((bundle, index) => (
+              <EvidenceBundleView
+                key={bundle.primary.id}
+                bundle={bundle}
+                position={index + 1}
+                total={bundles.length}
+              />
+            ))
           )}
         </div>
       </SheetContent>
@@ -450,11 +427,130 @@ function EvidenceDrawer({
   );
 }
 
+function EvidenceBundleView({
+  bundle,
+  position,
+  total,
+}: {
+  bundle: EvidenceBundle;
+  position: number;
+  total: number;
+}) {
+  const { primary, question, transcript, prediction } = bundle;
+  const isGap = normalizedEvidenceKind(primary) === "skillgap";
+  return (
+    <section className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-semibold text-foreground">
+          {isGap ? "Skill-gap evidence" : `Answer evidence ${position}`}
+        </h3>
+        {total > 1 && (
+          <Badge variant="secondary">
+            {position} of {total}
+          </Badge>
+        )}
+      </div>
+
+      <EvidenceField label="Competency">{primary.competency_id ?? "Not tagged"}</EvidenceField>
+
+      {isGap ? (
+        <>
+          <EvidenceField label="Current evidence score">
+            {formatPct(primary.skill_gap?.current_score)}
+          </EvidenceField>
+          <EvidenceField label="Target score">
+            {formatPct(primary.skill_gap?.target_score)}
+          </EvidenceField>
+          <EvidenceField label="Gap severity">
+            {formatPct(primary.skill_gap?.severity)}
+          </EvidenceField>
+          {primary.skill_gap?.rationale && (
+            <EvidenceField label="Why this is a gap">{primary.skill_gap.rationale}</EvidenceField>
+          )}
+        </>
+      ) : (
+        <>
+          {question?.question?.prompt_snapshot && (
+            <EvidenceField label="Question">{question.question.prompt_snapshot}</EvidenceField>
+          )}
+          {transcript?.transcript_span?.text && (
+            <EvidenceField label="Transcript">
+              <span>{transcript.transcript_span.text}</span>
+              {(transcript.transcript_span.start_ms !== undefined ||
+                transcript.transcript_span.end_ms !== undefined) && (
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {formatMs(transcript.transcript_span.start_ms)} –{" "}
+                  {formatMs(transcript.transcript_span.end_ms)}
+                </span>
+              )}
+            </EvidenceField>
+          )}
+          {primary.label && <EvidenceField label="Finding">{primary.label}</EvidenceField>}
+          {primary.criterion_evidence && primary.criterion_evidence.length > 0 && (
+            <RubricEvidence items={primary.criterion_evidence} />
+          )}
+          {primary.missing_concepts && primary.missing_concepts.length > 0 && (
+            <EvidenceField label="Missing concepts">
+              {primary.missing_concepts.join(", ")}
+            </EvidenceField>
+          )}
+          {typeof primary.confidence === "number" && (
+            <EvidenceField label="Evidence confidence">
+              {formatPct(primary.confidence)}
+            </EvidenceField>
+          )}
+          {prediction?.signal_quality && (
+            <EvidenceField label="Signal quality">
+              {formatStoredScore(prediction.signal_quality)}
+            </EvidenceField>
+          )}
+          {prediction?.model_reference && (
+            <EvidenceField label="Model reference">
+              <span className="break-all font-mono text-xs">{prediction.model_reference}</span>
+            </EvidenceField>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+function RubricEvidence({ items }: { items: NonNullable<EvidenceNode["criterion_evidence"]> }) {
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Rubric evidence
+      </p>
+      <ul className="mt-2 space-y-3">
+        {items.map((item, index) => (
+          <li key={`${item.criterion}-${index}`} className="rounded-xl bg-background p-3">
+            <div className="flex items-start justify-between gap-3">
+              <p className="font-medium text-foreground">{item.criterion}</p>
+              <Badge variant="outline">{formatPct(item.score)}</Badge>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">{item.rationale}</p>
+            {item.citations && item.citations.length > 0 && (
+              <ul className="mt-2 space-y-1 border-l-2 border-evidence/40 pl-3 text-xs">
+                {item.citations.map((citation, citationIndex) => (
+                  <li key={citationIndex}>
+                    “{citation.text}” ({formatSeconds(citation.start_seconds)}–
+                    {formatSeconds(citation.end_seconds)})
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function EvidenceField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-0.5 whitespace-pre-wrap text-foreground">{children}</p>
+      <div className="mt-0.5 whitespace-pre-wrap text-foreground">{children}</div>
     </div>
   );
 }
@@ -472,4 +568,13 @@ function formatMs(ms: number | undefined): string {
     .padStart(2, "0");
   const ss = (s % 60).toString().padStart(2, "0");
   return `${mm}:${ss}`;
+}
+
+function formatSeconds(seconds: number): string {
+  return `${seconds.toFixed(1)}s`;
+}
+
+function formatStoredScore(value: string): string {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1 ? formatPct(parsed) : value;
 }

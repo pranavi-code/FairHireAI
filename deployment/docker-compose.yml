@@ -4,7 +4,7 @@ services:
       context: ..
       dockerfile: deployment/Dockerfile.backend
     env_file:
-      - ../.env
+      - ./backend.env
     ports:
       - "8000:8000"
     restart: unless-stopped
@@ -20,7 +20,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
-    volumes:
-      # Configure these environment values only after training. The directory
-      # remains read-only so the API cannot mutate checkpoints.
-      - ${FAIRHIRE_MODEL_DIR:?Set FAIRHIRE_MODEL_DIR to the verified checkpoint directory}:/models:ro

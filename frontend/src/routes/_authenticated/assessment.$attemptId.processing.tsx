@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { CheckCircle2, Clock, Loader2, XCircle, PlayCircle } from "lucide-react";
 import { PageBody, PageHeader } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import { ErrorState, LoadingState, UnavailableState } from "@/components/app/Sta
 import { attemptsApi, TRAINED_CHECKPOINT_REQUIRED_CODE } from "@/lib/api/endpoints";
 import type { ProcessingJobView } from "@/lib/api/types";
 import { ApiError, isUnavailable } from "@/lib/api/errors";
+import { summarizeProcessing } from "@/lib/processing";
 
 export const Route = createFileRoute("/_authenticated/assessment/$attemptId/processing")({
   head: () => ({
@@ -29,7 +29,6 @@ export const Route = createFileRoute("/_authenticated/assessment/$attemptId/proc
 });
 
 const POLL_MS = 3000;
-const MAX_POLLS = 200; // ~10 min ceiling
 
 function ProcessingPage() {
   const { attemptId } = Route.useParams();
@@ -37,13 +36,18 @@ function ProcessingPage() {
 
   const startProcessing = useMutation({
     mutationFn: () => attemptsApi.startProcessing(attemptId),
+    onSettled: () => {
+      void jobs.refetch();
+      void attempt.refetch();
+    },
   });
-
-  // Kick off processing once on mount (idempotent server-side).
-  useEffect(() => {
-    startProcessing.mutate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attemptId]);
+  const finishInterview = useMutation({
+    mutationFn: () => attemptsApi.finishInterview(attemptId),
+    onSettled: () => {
+      void jobs.refetch();
+      void attempt.refetch();
+    },
+  });
 
   const jobs = useQuery({
     queryKey: ["jobs", attemptId],
@@ -51,10 +55,11 @@ function ProcessingPage() {
     refetchInterval: (q) => {
       const data = q.state.data;
       if (!Array.isArray(data)) return POLL_MS;
-      const active = data.some((j) => j.status === "queued" || j.status === "running");
-      if (!active) return false;
-      const count = q.state.dataUpdateCount ?? 0;
-      return count > MAX_POLLS ? false : POLL_MS;
+      const active = data.some(
+        (j) =>
+          j.status === "running" || (j.status === "queued" && j.attempt_count < j.max_attempts),
+      );
+      return active ? POLL_MS : false;
     },
   });
   const attempt = useQuery({
@@ -74,7 +79,17 @@ function ProcessingPage() {
     startProcessing.error.code === TRAINED_CHECKPOINT_REQUIRED_CODE;
 
   const list = jobs.data ?? [];
-  const allSucceeded = list.length > 0 && list.every((j) => j.status === "succeeded");
+  const {
+    evaluatedAnswerCount,
+    hasJobs,
+    hasFailed,
+    hasExhaustedJob,
+    retryableAnswerFailure,
+    retryableReportFailure,
+    allSucceeded,
+    allAnswersSucceeded,
+    canFinishInterview,
+  } = summarizeProcessing(list, attempt.data?.status);
 
   return (
     <>
@@ -92,14 +107,42 @@ function ProcessingPage() {
             >
               View report
             </Button>
-          ) : allSucceeded && attempt.data?.status === "interviewing" ? (
+          ) : allAnswersSucceeded && attempt.data?.status === "interviewing" ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={canFinishInterview ? "outline" : "default"}
+                className="rounded-full"
+                onClick={() =>
+                  navigate({ to: "/assessment/$attemptId/interview", params: { attemptId } })
+                }
+              >
+                Continue interview
+              </Button>
+              {canFinishInterview && (
+                <Button
+                  className="rounded-full"
+                  onClick={() => finishInterview.mutate()}
+                  disabled={finishInterview.isPending}
+                >
+                  {finishInterview.isPending ? "Submitting…" : "Submit interview & view report"}
+                </Button>
+              )}
+            </div>
+          ) : retryableAnswerFailure ? (
             <Button
               className="rounded-full"
-              onClick={() =>
-                navigate({ to: "/assessment/$attemptId/interview", params: { attemptId } })
-              }
+              onClick={() => startProcessing.mutate()}
+              disabled={startProcessing.isPending}
             >
-              Continue interview
+              {startProcessing.isPending ? "Retrying…" : "Retry failed processing"}
+            </Button>
+          ) : retryableReportFailure ? (
+            <Button
+              className="rounded-full"
+              onClick={() => finishInterview.mutate()}
+              disabled={finishInterview.isPending}
+            >
+              {finishInterview.isPending ? "Retrying…" : "Retry report generation"}
             </Button>
           ) : undefined
         }
@@ -114,9 +157,10 @@ function ProcessingPage() {
               again once the checkpoint is available.
             </AlertDescription>
           </Alert>
-        ) : startProcessing.isError && isUnavailable(startProcessing.error) ? (
+        ) : !hasJobs && startProcessing.isError && isUnavailable(startProcessing.error) ? (
           <UnavailableState feature="Processing" />
-        ) : startProcessing.isError &&
+        ) : !hasJobs &&
+          startProcessing.isError &&
           !(
             startProcessing.error instanceof ApiError && startProcessing.error.kind === "conflict"
           ) ? (
@@ -154,6 +198,13 @@ function ProcessingPage() {
                   <p className="text-sm text-muted-foreground">
                     The backend has not enqueued any jobs for this attempt yet.
                   </p>
+                  <Button
+                    className="rounded-full"
+                    onClick={() => startProcessing.mutate()}
+                    disabled={startProcessing.isPending}
+                  >
+                    {startProcessing.isPending ? "Starting…" : "Start processing"}
+                  </Button>
                 </div>
               ) : (
                 <>
@@ -166,8 +217,19 @@ function ProcessingPage() {
                     <Alert className="mt-6">
                       <AlertTitle>Answer evaluated</AlertTitle>
                       <AlertDescription>
-                        The bounded selector is ready to choose a justified follow-up or the next
-                        competency.
+                        {evaluatedAnswerCount} of at most 12 answers evaluated. The bounded selector
+                        can choose a justified follow-up or the next competency.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  {canFinishInterview && (
+                    <Alert className="mt-6">
+                      <AlertTitle>You can submit now or continue</AlertTitle>
+                      <AlertDescription>
+                        The minimum of 6 evaluated answers is complete. Submitting now creates a
+                        report only from collected evidence; any unassessed competencies are clearly
+                        marked insufficient. You may continue up to question 12 for broader
+                        coverage.
                       </AlertDescription>
                     </Alert>
                   )}
@@ -179,6 +241,38 @@ function ProcessingPage() {
                         complete.
                       </AlertDescription>
                     </Alert>
+                  )}
+                  {(hasFailed || hasExhaustedJob) && (
+                    <Alert variant="destructive" className="mt-6">
+                      <AlertTitle>
+                        {hasExhaustedJob
+                          ? "Processing needs maintenance"
+                          : "Processing was interrupted"}
+                      </AlertTitle>
+                      <AlertDescription>
+                        {hasExhaustedJob
+                          ? "A job reached its retry limit and cannot remain silently queued. Its persisted error must be inspected before one controlled recovery attempt."
+                          : retryableReportFailure
+                            ? "Report generation was interrupted. Retry it without repeating the interview or reprocessing successful answers."
+                            : "A temporary network or processing problem interrupted an answer. Use “Retry failed processing”; the existing uploaded video will be reused."}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  {hasFailed && startProcessing.isError && (
+                    <div className="mt-6">
+                      <ErrorState
+                        error={startProcessing.error as ApiError}
+                        onRetry={() => startProcessing.mutate()}
+                      />
+                    </div>
+                  )}
+                  {finishInterview.isError && (
+                    <div className="mt-6">
+                      <ErrorState
+                        error={finishInterview.error as ApiError}
+                        onRetry={() => finishInterview.mutate()}
+                      />
+                    </div>
                   )}
                 </>
               )}

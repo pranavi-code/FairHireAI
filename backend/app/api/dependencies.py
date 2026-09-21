@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from typing import Annotated
 from uuid import UUID
 
@@ -39,6 +40,20 @@ def authenticated_user_id(
 ) -> UUID:
     try:
         return repository.authenticated_user_id()
+    except SupabaseRepositoryError as exc:
+        raise translate_repository_error(exc) from exc
+    finally:
+        repository.close()
+
+
+def authenticated_repository(
+    repository: Annotated[SupabaseAttemptRepository, Depends(supabase_repository)],
+) -> Generator[SupabaseAttemptRepository, None, None]:
+    """Yield an authenticated repository for endpoints needing additional RLS reads."""
+
+    try:
+        repository.authenticated_user_id()
+        yield repository
     except SupabaseRepositoryError as exc:
         raise translate_repository_error(exc) from exc
     finally:

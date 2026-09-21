@@ -42,7 +42,7 @@ class Settings(BaseSettings):
         pattern=r"^[a-zA-Z0-9._-]+$",
     )
     gemini_embedding_dimensions: int = Field(default=384, ge=128, le=3072)
-    gemini_timeout_seconds: float = Field(default=45.0, gt=0.0, le=120.0)
+    gemini_timeout_seconds: float = Field(default=120.0, gt=0.0, le=120.0)
     gemini_max_retries: int = Field(default=3, ge=0, le=6)
     cors_allowed_origins: str = Field(
         default=(
@@ -65,6 +65,9 @@ class Settings(BaseSettings):
     whisper_model_root: str = "D:/FairHireAI-data/models/whisper"
     whisper_model: str = "small.en"
     worker_artifact_root: str = "D:/FairHireAI-data/runtime"
+    # Public API deployments set this only after a separately supervised worker
+    # has been provisioned with the verified checkpoint and server secret.
+    trusted_worker_available: bool = False
 
     @property
     def supabase_configured(self) -> bool:
@@ -99,6 +102,27 @@ class Settings(BaseSettings):
             and checkpoint_sha256
             and Path(checkpoint_path).is_file()
         )
+
+    @property
+    def selected_model_metadata_ready(self) -> bool:
+        _checkpoint_path, run_name, checkpoint_sha256 = self.selected_model
+        return bool(run_name and checkpoint_sha256)
+
+    @property
+    def worker_runtime_ready(self) -> bool:
+        local_worker_ready = (
+            self.worker_configured and self.gemini_configured and self.model_ready
+        )
+        external_worker_ready = (
+            self.trusted_worker_available
+            and self.gemini_configured
+            and self.selected_model_metadata_ready
+        )
+        return bool(local_worker_ready or external_worker_ready)
+
+    @property
+    def processing_ready(self) -> bool:
+        return bool(self.supabase_configured and self.worker_runtime_ready)
 
     @property
     def selected_model(self) -> tuple[str | None, str | None, str | None]:

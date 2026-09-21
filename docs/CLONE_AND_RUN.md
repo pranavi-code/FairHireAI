@@ -123,7 +123,7 @@ variable. Both real `.env` files are ignored by Git.
 
 When reusing the existing Supabase project, do not reapply migrations or seed
 records. For a new Supabase project, apply
-`deployment/supabase/migrations/0001...0014` in numeric order, then follow
+`deployment/supabase/migrations/0001...0016` in numeric order, then follow
 `deployment/supabase/README.md` to publish and validate the reviewed knowledge
 and question corpus.
 

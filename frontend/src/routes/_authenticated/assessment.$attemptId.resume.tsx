@@ -186,11 +186,17 @@ function ResumePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button asChild className="w-full rounded-full" disabled={!attached}>
-                  <Link to="/assessment/$attemptId/interview" params={{ attemptId }}>
+                {attached ? (
+                  <Button asChild className="w-full rounded-full">
+                    <Link to="/assessment/$attemptId/interview" params={{ attemptId }}>
+                      Continue to interview
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button className="w-full rounded-full" disabled>
                     Continue to interview
-                  </Link>
-                </Button>
+                  </Button>
+                )}
                 {!attached && (
                   <p className="text-xs text-muted-foreground">
                     No persistence is claimed until the backend attach endpoint succeeds.

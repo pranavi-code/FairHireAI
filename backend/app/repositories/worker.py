@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import httpx
+
+from backend.app.domain.knowledge import (
+    QuestionSearchRequest,
+    QuestionSearchResult,
+    ResourceSearchRequest,
+    ResourceSearchResult,
+)
 
 
 class WorkerRepositoryError(RuntimeError):
@@ -14,6 +22,8 @@ class WorkerRepositoryError(RuntimeError):
 
 
 class SupabaseWorkerRepository:
+    _STORAGE_RETRY_DELAYS_SECONDS = (0.0, 0.25, 1.0)
+
     def __init__(
         self,
         *,
@@ -24,6 +34,7 @@ class SupabaseWorkerRepository:
     ) -> None:
         if not secret_key:
             raise ValueError("A server-only Supabase secret key is required")
+        resilient_transport = transport or httpx.HTTPTransport(retries=3)
         self._client = httpx.Client(
             base_url=base_url.rstrip("/"),
             headers={
@@ -31,7 +42,7 @@ class SupabaseWorkerRepository:
                 "Authorization": f"Bearer {secret_key}",
             },
             timeout=timeout_seconds,
-            transport=transport,
+            transport=resilient_transport,
         )
 
     def close(self) -> None:
@@ -112,6 +123,132 @@ class SupabaseWorkerRepository:
             )
         )
 
+    def attempt(self, attempt_id: str) -> dict[str, Any]:
+        rows = self._rows(
+            "attempts",
+            params={"id": f"eq.{attempt_id}", "select": "*", "limit": "1"},
+        )
+        if len(rows) != 1:
+            raise WorkerRepositoryError("Attempt was not found")
+        return rows[0]
+
+    def request_report_generation(self, attempt_id: str) -> dict[str, object]:
+        """Queue an idempotent early-completion report after six evaluated answers."""
+
+        attempt = self.attempt(attempt_id)
+        if attempt.get("status") == "completed":
+            return {
+                "attempt_id": attempt_id,
+                "started": True,
+                "queued_job_count": 0,
+                "message": "The evidence-backed report is already complete.",
+            }
+        if attempt.get("status") != "interviewing":
+            raise WorkerRepositoryError(
+                "Finish the current answer processing before submitting the interview."
+            )
+
+        answers = self._rows(
+            "answers",
+            params={
+                "attempt_id": f"eq.{attempt_id}",
+                "select": "id,processing_status",
+            },
+        )
+        if any(item.get("processing_status") != "complete" for item in answers):
+            raise WorkerRepositoryError(
+                "Every submitted answer must finish processing before the "
+                "interview can be submitted."
+            )
+        analyses = self._rows(
+            "answer_analyses",
+            params={"attempt_id": f"eq.{attempt_id}", "select": "answer_id"},
+        )
+        analyzed_ids = {str(item["answer_id"]) for item in analyses}
+        evaluated_count = sum(
+            1 for item in answers if str(item["id"]) in analyzed_ids
+        )
+        if evaluated_count < 6:
+            raise WorkerRepositoryError(
+                "At least 6 evaluated answers are required before submitting the interview."
+            )
+
+        idempotency_key = f"report-generation:{attempt_id}:manual-v1"
+        existing = self._rows(
+            "processing_jobs",
+            params={
+                "idempotency_key": f"eq.{idempotency_key}",
+                "select": "*",
+                "limit": "1",
+            },
+        )
+        queued_count = 0
+        if existing:
+            job = existing[0]
+            status = str(job.get("status"))
+            if status == "failed":
+                if int(job.get("attempt_count") or 0) >= int(
+                    job.get("max_attempts") or 3
+                ):
+                    raise WorkerRepositoryError(
+                        "Report generation reached its retry limit. A maintainer "
+                        "must inspect the persisted error."
+                    )
+                self.update_job(
+                    str(job["id"]),
+                    status="queued",
+                    stage="waiting_for_worker",
+                    error_code=None,
+                    error_detail=None,
+                    queued_at=datetime.now(timezone.utc).isoformat(),
+                    started_at=None,
+                    finished_at=None,
+                )
+                queued_count = 1
+            elif status in {"queued", "running"}:
+                queued_count = 0
+            elif status == "succeeded":
+                queued_count = 0
+            else:
+                raise WorkerRepositoryError("The existing report job cannot be restarted.")
+        else:
+            response = self._check(
+                self._client.post(
+                    "/rest/v1/processing_jobs",
+                    params={"on_conflict": "idempotency_key"},
+                    headers={
+                        "Prefer": "resolution=ignore-duplicates,return=representation"
+                    },
+                    json={
+                        "attempt_id": attempt_id,
+                        "answer_id": None,
+                        "job_type": "report_generation",
+                        "status": "queued",
+                        "stage": "waiting_for_worker",
+                        "idempotency_key": idempotency_key,
+                    },
+                )
+            )
+            payload = response.json()
+            if not isinstance(payload, list) or len(payload) > 1:
+                raise WorkerRepositoryError("Invalid report-generation job response")
+            # A concurrent finish request may have inserted the same unique
+            # idempotency key after our initial read. PostgREST returns an empty
+            # representation for the ignored duplicate; both callers still
+            # converge on the one durable report job.
+            queued_count = 1 if payload else 0
+
+        self.update_attempt(attempt_id, status="processing")
+        return {
+            "attempt_id": attempt_id,
+            "started": True,
+            "queued_job_count": queued_count,
+            "message": (
+                "Evidence-backed report generation queued from "
+                f"{evaluated_count} evaluated answers."
+            ),
+        }
+
     def answer_context(self, answer_id: str) -> dict[str, Any]:
         answers = self._rows("answers", params={"id": f"eq.{answer_id}", "select": "*"})
         if len(answers) != 1:
@@ -150,9 +287,26 @@ class SupabaseWorkerRepository:
         return bool(rows and rows[0].get("granted") is True)
 
     def download_object(self, bucket: str, storage_key: str, destination: Path) -> None:
-        response = self._check(
-            self._client.get(f"/storage/v1/object/{bucket}/{storage_key}")
-        )
+        response: httpx.Response | None = None
+        last_error: Exception | None = None
+        for delay in self._STORAGE_RETRY_DELAYS_SECONDS:
+            if delay:
+                time.sleep(delay)
+            try:
+                candidate = self._client.get(
+                    f"/storage/v1/object/{bucket}/{storage_key}",
+                    timeout=httpx.Timeout(120.0, connect=15.0),
+                )
+                if candidate.status_code < 500:
+                    response = self._check(candidate)
+                    break
+                last_error = WorkerRepositoryError(self._message(candidate))
+            except (httpx.TimeoutException, httpx.NetworkError) as exc:
+                last_error = exc
+        if response is None:
+            raise WorkerRepositoryError(
+                "Private video download failed after three bounded attempts."
+            ) from last_error
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(response.content)
 
@@ -221,6 +375,68 @@ class SupabaseWorkerRepository:
             "learning_resources",
             params={"reviewer_status": "eq.approved", "select": "*"},
         )
+
+    def search_question_packages(
+        self,
+        request: QuestionSearchRequest,
+    ) -> list[QuestionSearchResult]:
+        response = self._check(
+            self._client.post(
+                "/rest/v1/rpc/match_question_packages",
+                json={
+                    "p_query": request.query,
+                    "p_role_id": request.role_id,
+                    "p_competency_id": request.competency_id,
+                    "p_seniority": request.seniority,
+                    "p_difficulty": request.difficulty,
+                    "p_query_embedding": request.query_embedding,
+                    "p_match_count": request.match_count,
+                },
+            )
+        )
+        payload = response.json()
+        if not isinstance(payload, list):
+            raise WorkerRepositoryError("Invalid question-package matches response")
+        return [QuestionSearchResult.model_validate(item) for item in payload]
+
+    def validated_question_package_by_id(
+        self,
+        package_id: str,
+    ) -> dict[str, Any] | None:
+        rows = self._rows(
+            "question_packages",
+            params={
+                "id": f"eq.{package_id}",
+                "validation_status": (
+                    "in.(generated_validated_for_practice,"
+                    "faculty_reviewed_research_set)"
+                ),
+                "select": "*",
+                "limit": "1",
+            },
+        )
+        return rows[0] if rows else None
+
+    def search_learning_resources(
+        self,
+        request: ResourceSearchRequest,
+    ) -> list[ResourceSearchResult]:
+        response = self._check(
+            self._client.post(
+                "/rest/v1/rpc/match_learning_resources",
+                json={
+                    "p_query": request.query,
+                    "p_competency_id": request.competency_id,
+                    "p_difficulty": request.difficulty,
+                    "p_query_embedding": request.query_embedding,
+                    "p_match_count": request.match_count,
+                },
+            )
+        )
+        payload = response.json()
+        if not isinstance(payload, list):
+            raise WorkerRepositoryError("Invalid learning-resource matches response")
+        return [ResourceSearchResult.model_validate(item) for item in payload]
 
     def replace_attempt_outputs(
         self,

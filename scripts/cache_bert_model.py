@@ -9,17 +9,24 @@ from pathlib import Path
 import torch
 from transformers import AutoTokenizer, BertModel
 
+DEFAULT_BERT_REVISION = "86b5e0934494bd15c9632b12f734a8a67f723594"
+
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-root", required=True)
     parser.add_argument("--source", default="google-bert/bert-base-uncased")
+    parser.add_argument("--revision", default=DEFAULT_BERT_REVISION)
     args = parser.parse_args()
     output = Path(args.output_root).resolve()
     output.mkdir(parents=True, exist_ok=True)
 
-    tokenizer = AutoTokenizer.from_pretrained(args.source, use_fast=True)
-    model = BertModel.from_pretrained(args.source)
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.source,
+        revision=args.revision,
+        use_fast=True,
+    )
+    model = BertModel.from_pretrained(args.source, revision=args.revision)
     tokenizer.save_pretrained(output)
     model.save_pretrained(output, safe_serialization=True)
 
@@ -30,6 +37,7 @@ def main() -> None:
         shape = list(local_model(**encoded).last_hidden_state.shape)
     summary = {
         "source": args.source,
+        "revision": args.revision,
         "output_root": str(output),
         "vocabulary_size": local_tokenizer.vocab_size,
         "hidden_size": local_model.config.hidden_size,

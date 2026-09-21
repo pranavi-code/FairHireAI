@@ -79,6 +79,16 @@ export function isAuthError(error: unknown): boolean {
 
 export function friendlyMessage(error: unknown): string {
   if (error instanceof ApiError) {
+    const safeUnavailableCodes = new Set([
+      "dynamic_interview_unavailable",
+      "dynamic_question_generation_failed",
+      "dynamic_question_validation_failed",
+      "gemini_rate_limited",
+      "gemini_temporarily_unavailable",
+    ]);
+    if (error.kind === "unavailable" && error.code && safeUnavailableCodes.has(error.code)) {
+      return error.message;
+    }
     // Prefer server-supplied user-facing message when present.
     if (error.message && error.status && error.status < 500 && error.kind !== "not_configured") {
       // A server 4xx typically means the message is actionable (validation, etc.).

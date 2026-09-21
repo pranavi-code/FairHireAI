@@ -35,6 +35,7 @@ class LearningResource(BaseModel):
     description: str = Field(min_length=10, max_length=2_000)
     reviewer_status: Literal["pending", "approved", "retired"]
     reviewer_id: str | None = Field(default=None, max_length=120)
+    retrieval_scores: dict[str, float] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def validate_review(self) -> LearningResource:
@@ -62,7 +63,10 @@ class RoadmapItem(BaseModel):
 
 
 class RoadmapResult(BaseModel):
-    policy_version: Literal["curated-roadmap-v1"] = "curated-roadmap-v1"
+    policy_version: Literal[
+        "curated-roadmap-v1",
+        "grounded-dynamic-roadmap-gemini-v1",
+    ] = "curated-roadmap-v1"
     items: list[RoadmapItem]
     unresolved_skill_gap_node_ids: list[str]
     safety_note: str
@@ -74,15 +78,14 @@ def build_roadmap(request: RoadmapRequest) -> RoadmapResult:
     unknown_gaps = {gap.competency_id for gap in request.gaps} - competency_ids
     if unknown_gaps:
         raise ValueError(f"Unknown gap competencies: {sorted(unknown_gaps)}")
-    for resource in request.resources:
-        unknown = set(resource.competency_ids) - competency_ids
-        if unknown:
-            raise ValueError(
-                f"Resource {resource.resource_id} has unknown competencies: {sorted(unknown)}"
-            )
-
     approved = [
-        resource for resource in request.resources if resource.reviewer_status == "approved"
+        resource
+        for resource in request.resources
+        if resource.reviewer_status == "approved"
+        # The reviewed knowledge base is shared by every supported role. Ignore
+        # resources that do not target this attempt's role instead of treating
+        # their valid cross-role competency tags as corrupt input.
+        and set(resource.competency_ids) & competency_ids
     ]
     used_resources: set[str] = set()
     items: list[RoadmapItem] = []
@@ -100,6 +103,7 @@ def build_roadmap(request: RoadmapRequest) -> RoadmapResult:
         ]
         candidates.sort(
             key=lambda resource: (
+                -resource.retrieval_scores.get(gap.competency_id, 0.0),
                 0 if resource.difficulty == "beginner" else 1,
                 resource.estimated_minutes,
                 resource.resource_id,
@@ -118,7 +122,8 @@ def build_roadmap(request: RoadmapRequest) -> RoadmapResult:
                     resource_id=resource.resource_id,
                     priority=priority,
                     rationale=(
-                        f"Approved resource matched the {gap.competency_id} gap "
+                        f"Hybrid RAG retrieved this approved resource for the "
+                        f"{gap.competency_id} gap "
                         f"(current {gap.current_score:.2f}, target "
                         f"{gap.target_score:.2f})."
                     ),

@@ -36,3 +36,4 @@ def test_live_e2e_covers_the_real_student_pipeline() -> None:
     assert "Completed attempt has no evidence nodes" in script
     assert "Completed attempt has an invalid roadmap payload" in script
     assert "Confirm interview completion" in script
+    assert 'f"{args.api_base_url.rstrip(\'/\')}/health"' in script

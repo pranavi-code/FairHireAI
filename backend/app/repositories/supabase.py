@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from typing import Any
 from uuid import UUID
 
@@ -52,6 +53,19 @@ class SupabaseRepositoryError(RuntimeError):
         super().__init__(message)
 
 
+def persisted_resume_claim_id(attempt_id: UUID, extractor_claim_id: str) -> str:
+    """Return a stable, attempt-scoped primary key for an extracted resume claim.
+
+    Extractor claim identifiers are intentionally deterministic for traceability.  They
+    are therefore identical when the same document is used in multiple assessments,
+    while ``resume_claims.id`` is a global primary key.  Scope the persistence identity
+    to the attempt so repeated uploads are idempotent without colliding with another
+    assessment that used the same resume.
+    """
+    digest = hashlib.sha256(f"{attempt_id}:{extractor_claim_id}".encode()).hexdigest()[:40]
+    return f"resume_claim_{digest}"
+
+
 class SupabaseAttemptRepository:
     def __init__(
         self,
@@ -62,6 +76,7 @@ class SupabaseAttemptRepository:
         timeout_seconds: float = 15.0,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
+        resilient_transport = transport or httpx.HTTPTransport(retries=3)
         self._client = httpx.Client(
             base_url=base_url.rstrip("/"),
             headers={
@@ -70,7 +85,7 @@ class SupabaseAttemptRepository:
                 "Content-Type": "application/json",
             },
             timeout=timeout_seconds,
-            transport=transport,
+            transport=resilient_transport,
         )
 
     def close(self) -> None:
@@ -220,7 +235,7 @@ class SupabaseAttemptRepository:
                 "p_extractor_version": request.evidence.extractor_version,
                 "p_claims": [
                     {
-                        "id": claim.claim_id,
+                        "id": persisted_resume_claim_id(attempt_id, claim.claim_id),
                         "claim_type": claim.claim_type,
                         "normalized_text": claim.normalized_text,
                         "source_page": claim.source.page,
@@ -253,6 +268,67 @@ class SupabaseAttemptRepository:
         if not isinstance(payload, list):
             raise SupabaseRepositoryError(502, "Supabase returned invalid questions.")
         return [PersistedQuestion.model_validate(item) for item in payload]
+
+    def recent_same_role_questions(
+        self,
+        *,
+        role_id: str,
+        competency_id: str,
+        exclude_attempt_id: UUID,
+        attempt_limit: int = 4,
+        question_limit: int = 36,
+    ) -> list[PersistedQuestion]:
+        """Return the caller's recent same-role prompts for repetition prevention.
+
+        Both reads use the caller's JWT, so the existing attempts and question RLS
+        policies continue to enforce ownership.
+        """
+
+        def history_get(path: str, params: dict[str, str]) -> httpx.Response:
+            last_error: httpx.RequestError | None = None
+            for _attempt in range(2):
+                try:
+                    return self._client.get(path, params=params)
+                except httpx.RequestError as exc:
+                    last_error = exc
+            raise SupabaseRepositoryError(
+                503,
+                "Supabase question history is temporarily unavailable.",
+            ) from last_error
+
+        attempts_response = history_get(
+            "/rest/v1/attempts",
+            {
+                "role_id": f"eq.{role_id}",
+                "id": f"neq.{exclude_attempt_id}",
+                "status": "in.(interviewing,processing,completed,failed)",
+                "select": "id",
+                "order": "created_at.desc",
+                "limit": str(max(1, min(attempt_limit, 10))),
+            },
+        )
+        self._raise_for_status(attempts_response)
+        attempts_payload = attempts_response.json()
+        if not isinstance(attempts_payload, list):
+            raise SupabaseRepositoryError(502, "Supabase returned invalid attempt history.")
+        attempt_ids = [str(item.get("id")) for item in attempts_payload if item.get("id")]
+        if not attempt_ids:
+            return []
+        questions_response = history_get(
+            "/rest/v1/interview_questions",
+            {
+                "attempt_id": f"in.({','.join(attempt_ids)})",
+                "competency_id": f"eq.{competency_id}",
+                "select": "*",
+                "order": "created_at.desc",
+                "limit": str(max(1, min(question_limit, 100))),
+            },
+        )
+        self._raise_for_status(questions_response)
+        questions_payload = questions_response.json()
+        if not isinstance(questions_payload, list):
+            raise SupabaseRepositoryError(502, "Supabase returned invalid question history.")
+        return [PersistedQuestion.model_validate(item) for item in questions_payload]
 
     def persist_question(
         self,
@@ -315,6 +391,28 @@ class SupabaseAttemptRepository:
             payload[0] if payload else None,
         )
 
+    def validated_question_package_by_id(
+        self,
+        package_id: str,
+    ) -> dict[str, Any] | None:
+        response = self._client.get(
+            "/rest/v1/question_packages",
+            params={
+                "id": f"eq.{package_id}",
+                "validation_status": (
+                    "in.(generated_validated_for_practice,"
+                    "faculty_reviewed_research_set)"
+                ),
+                "select": "*",
+                "limit": "1",
+            },
+        )
+        self._raise_for_status(response)
+        payload = response.json()
+        if not isinstance(payload, list):
+            raise SupabaseRepositoryError(502, "Supabase returned an invalid question package.")
+        return payload[0] if payload else None
+
     def analysis_for_answer(self, answer_id: UUID) -> dict[str, Any] | None:
         response = self._client.get(
             "/rest/v1/answer_analyses",
@@ -326,12 +424,17 @@ class SupabaseAttemptRepository:
             raise SupabaseRepositoryError(502, "Supabase returned invalid answer analysis.")
         return payload[0] if payload else None
 
-    def external_ai_consent(self, attempt_id: UUID) -> bool:
+    def consent_granted(self, consent_type: str, attempt_id: UUID | None = None) -> bool:
+        scope = (
+            f"(attempt_id.eq.{attempt_id},attempt_id.is.null)"
+            if attempt_id
+            else "(attempt_id.is.null)"
+        )
         response = self._client.get(
             "/rest/v1/consent_records",
             params={
-                "consent_type": "eq.external_ai_processing",
-                "or": f"(attempt_id.eq.{attempt_id},attempt_id.is.null)",
+                "consent_type": f"eq.{consent_type}",
+                "or": scope,
                 "select": "granted,occurred_at",
                 "order": "occurred_at.desc",
                 "limit": "1",
@@ -342,6 +445,9 @@ class SupabaseAttemptRepository:
         return bool(
             isinstance(payload, list) and payload and payload[0].get("granted") is True
         )
+
+    def external_ai_consent(self, attempt_id: UUID) -> bool:
+        return self.consent_granted("external_ai_processing", attempt_id)
 
     def question_personalization_context(self, attempt_id: UUID) -> dict[str, list[str]]:
         claims_response = self._client.get(
@@ -434,6 +540,19 @@ class SupabaseAttemptRepository:
         return [ProcessingJobView.model_validate(item) for item in payload]
 
     def enqueue_processing(self, attempt_id: UUID) -> ProcessingStartResult:
+        exhausted = [
+            job
+            for job in self.list_jobs(attempt_id)
+            if job.job_type == "answer_preprocessing"
+            and job.status in {"queued", "failed"}
+            and job.attempt_count >= job.max_attempts
+        ]
+        if exhausted:
+            raise SupabaseRepositoryError(
+                409,
+                "An answer-processing job reached its retry limit. Its persisted "
+                "error must be inspected before a controlled recovery attempt.",
+            )
         response = self._client.post(
             "/rest/v1/rpc/enqueue_attempt_processing",
             json={"p_attempt_id": str(attempt_id)},
@@ -441,6 +560,20 @@ class SupabaseAttemptRepository:
         self._raise_for_status(response)
         return ProcessingStartResult.model_validate(
             self._parse_single_row(response.json(), "Processing request")
+        )
+
+    def request_report_generation(self, attempt_id: UUID) -> ProcessingStartResult:
+        """Atomically request a report through the authenticated database RPC."""
+
+        response = self._client.post(
+            "/rest/v1/rpc/request_attempt_report",
+            json={"p_attempt_id": str(attempt_id)},
+        )
+        if response.status_code in {400, 422}:
+            raise SupabaseRepositoryError(409, self._message(response))
+        self._raise_for_status(response)
+        return ProcessingStartResult.model_validate(
+            self._parse_single_row(response.json(), "Report-generation request")
         )
 
     def report(self, attempt_id: UUID) -> AttemptReport:
@@ -505,7 +638,8 @@ class SupabaseAttemptRepository:
                 "status": "eq.completed",
                 "select": (
                     "id,role_id,completed_at,"
-                    "scorecards(placement_readiness,competency_scores)"
+                    "scorecards(placement_readiness,sufficient_evidence,"
+                    "overall_evidence_confidence,insufficiency_reasons,competency_scores)"
                 ),
                 "order": "completed_at.asc",
             },
@@ -534,6 +668,15 @@ class SupabaseAttemptRepository:
                     role_id=item["role_id"],
                     completed_at=item["completed_at"],
                     placement_readiness=scorecard.get("placement_readiness"),
+                    sufficient_evidence=bool(scorecard.get("sufficient_evidence", False)),
+                    overall_evidence_confidence=scorecard.get(
+                        "overall_evidence_confidence"
+                    ),
+                    insufficiency_reasons=[
+                        str(reason)
+                        for reason in (scorecard.get("insufficiency_reasons") or [])
+                        if isinstance(reason, str)
+                    ],
                     competency_scores=self._competency_score_views(
                         scorecard.get("competency_scores"),
                         role=role,
@@ -549,7 +692,7 @@ class SupabaseAttemptRepository:
             message=(
                 "Completed-attempt progress is available."
                 if attempts
-                else "Complete at least two evidence-backed attempts to compare progress."
+                else "Complete one evidence-backed interview to establish your progress baseline."
             ),
         )
 
@@ -581,6 +724,13 @@ class SupabaseAttemptRepository:
                 if isinstance(value, (int, float)) and 0.0 <= float(value) <= 1.0
                 else None
             )
+            coverage_value = raw.get("coverage")
+            coverage = (
+                float(coverage_value)
+                if isinstance(coverage_value, (int, float))
+                and 0.0 <= float(coverage_value) <= 1.0
+                else 0.0
+            )
             evidence_ids = raw.get("evidence_node_ids") or []
             reasons = raw.get("insufficiency_reasons") or []
             views.append(
@@ -588,6 +738,8 @@ class SupabaseAttemptRepository:
                     competency_id=competency.competency_id,
                     name=competency.name,
                     score=score,
+                    coverage=coverage,
+                    sufficient_evidence=bool(raw.get("sufficient_evidence", False)),
                     weight=competency_weights[competency.competency_id],
                     evidence_node_ids=[
                         str(item) for item in evidence_ids if isinstance(item, str)
@@ -707,6 +859,16 @@ class SupabaseAttemptRepository:
                 if attributes.get("model_reference")
                 else None
             ),
+            criterion_evidence=[
+                item
+                for item in (attributes.get("criterion_evidence") or [])
+                if isinstance(item, dict)
+            ],
+            missing_concepts=[
+                str(item)
+                for item in (attributes.get("missing_concepts") or [])
+                if isinstance(item, str)
+            ],
             skill_gap=skill_gap,
         )
 

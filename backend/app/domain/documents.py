@@ -14,7 +14,14 @@ from pydantic import BaseModel, Field
 from pypdf import PdfReader
 
 MAX_DOCUMENT_BYTES = 5 * 1024 * 1024
-DocumentKind = Literal["pdf", "docx", "text"]
+DocumentKind = Literal["pdf", "docx", "text", "image"]
+
+IMAGE_MEDIA_TYPES = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+}
 
 
 class DocumentExtractionError(ValueError):
@@ -71,12 +78,39 @@ def _detect_kind(filename: str, content: bytes) -> DocumentKind:
         except zipfile.BadZipFile as exc:
             raise DocumentExtractionError("invalid_docx", "The DOCX archive is corrupt.") from exc
         return "docx"
+    detected_image: str | None = None
+    if content.startswith(b"\xff\xd8\xff"):
+        detected_image = "image/jpeg"
+    elif content.startswith(b"\x89PNG\r\n\x1a\n"):
+        detected_image = "image/png"
+    elif content.startswith(b"RIFF") and content[8:12] == b"WEBP":
+        detected_image = "image/webp"
+    if detected_image:
+        if IMAGE_MEDIA_TYPES.get(suffix) != detected_image:
+            raise DocumentExtractionError(
+                "type_mismatch",
+                "The image content does not match its filename extension.",
+            )
+        return "image"
+    if suffix in IMAGE_MEDIA_TYPES:
+        raise DocumentExtractionError("invalid_image", "The uploaded image is invalid or corrupt.")
     if suffix in {".txt", ".md"}:
         return "text"
     raise DocumentExtractionError(
         "unsupported_document",
-        "Supported document formats are PDF, DOCX, TXT, and MD.",
+        "Supported document formats are PDF, DOCX, TXT, MD, JPG, JPEG, PNG, and WEBP.",
     )
+
+
+def media_type_for_document(filename: str, content: bytes) -> str:
+    kind = _detect_kind(filename, content)
+    if kind == "pdf":
+        return "application/pdf"
+    if kind == "docx":
+        return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    if kind == "text":
+        return "text/plain"
+    return IMAGE_MEDIA_TYPES[Path(filename).suffix.casefold()]
 
 
 def _combine_pages(raw_pages: list[tuple[int | None, str]]) -> tuple[str, list[ExtractedPage]]:
@@ -105,7 +139,7 @@ def _combine_pages(raw_pages: list[tuple[int | None, str]]) -> tuple[str, list[E
     if not text.strip():
         raise DocumentExtractionError(
             "no_extractable_text",
-            "The document contains no extractable text. Scanned PDFs require OCR before upload.",
+            "The document contains no extractable text.",
         )
     if len(text) > 200_000:
         raise DocumentExtractionError(
@@ -158,7 +192,12 @@ def _extract_text(content: bytes) -> tuple[str, list[ExtractedPage]]:
     return _combine_pages([(None, decoded)])
 
 
-def extract_document(filename: str, content: bytes) -> ExtractedDocument:
+def extract_document(
+    filename: str,
+    content: bytes,
+    *,
+    ocr_text: str | None = None,
+) -> ExtractedDocument:
     safe_name = _safe_filename(filename)
     if not content:
         raise DocumentExtractionError("empty_document", "The uploaded document is empty.")
@@ -168,17 +207,32 @@ def extract_document(filename: str, content: bytes) -> ExtractedDocument:
         )
     kind = _detect_kind(safe_name, content)
     if kind == "pdf":
-        text, pages = _extract_pdf(content)
+        try:
+            text, pages = _extract_pdf(content)
+            extractor = "pypdf"
+        except DocumentExtractionError as exc:
+            if exc.code != "no_extractable_text" or ocr_text is None:
+                raise
+            text, pages = _combine_pages([(None, ocr_text)])
+            extractor = "gemini-vision-ocr"
         media_type = "application/pdf"
-        extractor = "pypdf"
     elif kind == "docx":
         text, pages = _extract_docx(content)
         media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         extractor = "python-docx"
-    else:
+    elif kind == "text":
         text, pages = _extract_text(content)
         media_type = "text/plain"
         extractor = "utf8-text"
+    else:
+        if ocr_text is None:
+            raise DocumentExtractionError(
+                "ocr_required",
+                "Image job descriptions require OCR by the configured backend service.",
+            )
+        text, pages = _combine_pages([(1, ocr_text)])
+        media_type = media_type_for_document(safe_name, content)
+        extractor = "gemini-vision-ocr"
     return ExtractedDocument(
         filename=safe_name,
         document_kind=kind,

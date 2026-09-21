@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from statistics import fmean
@@ -23,6 +24,7 @@ from backend.app.domain.interviews import FOLLOW_UP_THRESHOLD
 from backend.app.domain.roadmap import (
     LearningResource,
     RoadmapRequest,
+    RoadmapResult,
     SkillGap,
     build_roadmap,
 )
@@ -160,6 +162,16 @@ def build_attempt_output(
     resume_claims: list[dict[str, Any]],
     resources: list[dict[str, Any]],
     parent_scorecard: dict[str, Any] | None = None,
+    resource_retriever: Callable[[list[SkillGap]], list[dict[str, Any]]] | None = None,
+    gap_enricher: Callable[
+        [list[SkillGap], list[TechnicalAnswerEvaluation]], dict[str, Any]
+    ]
+    | None = None,
+    roadmap_personalizer: Callable[
+        [list[SkillGap], RoadmapResult, list[LearningResource], dict[str, Any]],
+        RoadmapResult,
+    ]
+    | None = None,
 ) -> AttemptOutput:
     attempt_uuid = UUID(str(attempt["id"]))
     role = load_role_template(str(attempt["role_id"]))
@@ -169,8 +181,11 @@ def build_attempt_output(
     nodes: list[GraphNode] = []
     edges: list[GraphEdge] = []
     attempt_node = f"attempt:{attempt_uuid}"
-    role_node = f"role:{role.role_id}:{str(attempt_uuid)[:8]}"
-    student_node = f"student:{str(attempt['user_id'])}"
+    role_node = f"role:{role.role_id}:{attempt_uuid}"
+    # A graph is owned by exactly one attempt.  Scope even the student node to
+    # that attempt so a later assessment by the same user cannot collide with
+    # the global evidence_nodes primary key.
+    student_node = f"student:{str(attempt['user_id'])}:{attempt_uuid}"
     nodes.extend(
         [
             _node(
@@ -201,7 +216,7 @@ def build_attempt_output(
     )
     competency_node_ids: dict[str, str] = {}
     for competency in role.competencies:
-        node_id = f"competency:{competency.competency_id}:{str(attempt_uuid)[:8]}"
+        node_id = f"competency:{competency.competency_id}:{attempt_uuid}"
         competency_node_ids[competency.competency_id] = node_id
         nodes.append(
             _node(
@@ -216,7 +231,7 @@ def build_attempt_output(
         )
         edges.append(
             _edge(
-                edge_id=f"edge:requires:{competency.competency_id}:{str(attempt_uuid)[:8]}",
+                edge_id=f"edge:requires:{competency.competency_id}:{attempt_uuid}",
                 edge_type="requires",
                 attempt_id=attempt_uuid,
                 source_node_id=role_node,
@@ -267,14 +282,14 @@ def build_attempt_output(
         evaluations[evaluation.competency_id].append(evaluation)
         delivery_by_answer.append(raw_analysis["delivery_metrics"])
         base_signals.append(float(raw_analysis["base_multimodal_interview_signal"]))
-        short = str(answer["id"])[:8]
-        question_node = f"question:{short}"
-        answer_node = f"answer:{short}"
-        transcript_node = f"transcript:{short}"
-        audio_node = f"audio:{short}"
-        visual_node = f"visual:{short}"
-        prediction_node = f"prediction:{short}"
-        claim_node = f"evidence:{short}"
+        answer_key = str(answer["id"])
+        question_node = f"question:{answer_key}"
+        answer_node = f"answer:{answer_key}"
+        transcript_node = f"transcript:{answer_key}"
+        audio_node = f"audio:{answer_key}"
+        visual_node = f"visual:{answer_key}"
+        prediction_node = f"prediction:{answer_key}"
+        claim_node = f"evidence:{answer_key}"
         evidence_ids[evaluation.competency_id].append(claim_node)
         transcript_text = str(raw_analysis["transcript_text"])
         nodes.extend(
@@ -370,7 +385,7 @@ def build_attempt_output(
         ):
             edges.append(
                 _edge(
-                    edge_id=f"edge:{relation}:{short}",
+                    edge_id=f"edge:{relation}:{answer_key}",
                     edge_type=relation,
                     attempt_id=attempt_uuid,
                     source_node_id=question_node,
@@ -386,7 +401,7 @@ def build_attempt_output(
         ):
             edges.append(
                 _edge(
-                    edge_id=f"edge:{relation}:{short}",
+                    edge_id=f"edge:{relation}:{answer_key}",
                     edge_type=relation,
                     attempt_id=attempt_uuid,
                     source_node_id=answer_node,
@@ -396,7 +411,7 @@ def build_attempt_output(
             )
         edges.append(
             _edge(
-                edge_id=f"edge:supports:{short}",
+                edge_id=f"edge:supports:{answer_key}",
                 edge_type="supports",
                 attempt_id=attempt_uuid,
                 source_node_id=claim_node,
@@ -407,26 +422,34 @@ def build_attempt_output(
 
     graph = EvidenceGraph(attempt_id=attempt_uuid, nodes=nodes, edges=edges)
     competency_scores = {
-        competency.competency_id: _metric(
-            _mean(
-                [
-                    evaluation.competency_rubric_score
-                    for evaluation in evaluations[competency.competency_id]
-                ]
-            ),
-            evidence_ids[competency.competency_id],
+        competency.competency_id: (
+            _metric(
+                _mean(
+                    [
+                        evaluation.competency_rubric_score
+                        for evaluation in evaluations[competency.competency_id]
+                    ]
+                ),
+                evidence_ids[competency.competency_id],
+            )
+            if evaluations[competency.competency_id]
+            else _not_applicable()
         )
         for competency in role.competencies
     }
     competency_coverage = {
-        competency.competency_id: _metric(
-            _mean(
-                [
-                    evaluation.competency_coverage
-                    for evaluation in evaluations[competency.competency_id]
-                ]
-            ),
-            evidence_ids[competency.competency_id],
+        competency.competency_id: (
+            _metric(
+                _mean(
+                    [
+                        evaluation.competency_coverage
+                        for evaluation in evaluations[competency.competency_id]
+                    ]
+                ),
+                evidence_ids[competency.competency_id],
+            )
+            if evaluations[competency.competency_id]
+            else _not_applicable()
         )
         for competency in role.competencies
     }
@@ -515,35 +538,9 @@ def build_attempt_output(
 
     gaps: list[SkillGap] = []
     for item in scorecard.competency_scores:
-        if item.score >= 0.70 or item.coverage < 0.70:
+        if item.score is None or item.score >= 0.70 or item.coverage < 0.70:
             continue
-        gap_id = f"gap:{item.competency_id}:{str(attempt_uuid)[:8]}"
-        gap_node = _node(
-            node_id=gap_id,
-            node_type="SkillGap",
-            attempt_id=attempt_uuid,
-            source=scorecard.formula_version,
-            confidence=scorecard.overall_evidence_confidence,
-            text=f"Evidence-backed practice gap in {item.competency_id}",
-            attributes={
-                "competency_id": item.competency_id,
-                "current_score": item.score,
-                "target_score": 0.70,
-                "severity": round(0.70 - item.score, 6),
-                "rationale": "Rubric score is below the reviewed practice target.",
-            },
-        )
-        nodes.append(gap_node)
-        edges.append(
-            _edge(
-                edge_id=f"edge:gap:{item.competency_id}:{str(attempt_uuid)[:8]}",
-                edge_type="indicates_gap",
-                attempt_id=attempt_uuid,
-                source_node_id=competency_node_ids[item.competency_id],
-                target_node_id=gap_id,
-                confidence=scorecard.overall_evidence_confidence,
-            )
-        )
+        gap_id = f"gap:{item.competency_id}:{attempt_uuid}"
         gaps.append(
             SkillGap(
                 skill_gap_node_id=gap_id,
@@ -555,6 +552,59 @@ def build_attempt_output(
             )
         )
 
+    gap_guidance = (
+        gap_enricher(gaps, all_evaluations) if gaps and gap_enricher else {}
+    )
+    for gap in gaps:
+        guidance = gap_guidance.get(gap.skill_gap_node_id)
+        title = (
+            str(guidance.title)
+            if guidance is not None
+            else f"Practice gap in {gap.competency_id}"
+        )
+        rationale = (
+            str(guidance.rationale)
+            if guidance is not None
+            else "Rubric score is below the reviewed practice target."
+        )
+        practice_focus = (
+            list(guidance.practice_focus) if guidance is not None else []
+        )
+        gap_node = _node(
+            node_id=gap.skill_gap_node_id,
+            node_type="SkillGap",
+            attempt_id=attempt_uuid,
+            source=(
+                "evidence-gap-guidance-gemini-v1"
+                if guidance is not None
+                else scorecard.formula_version
+            ),
+            confidence=scorecard.overall_evidence_confidence,
+            text=title,
+            attributes={
+                "competency_id": gap.competency_id,
+                "current_score": gap.current_score,
+                "target_score": gap.target_score,
+                "severity": gap.severity,
+                "rationale": rationale,
+                "practice_focus": practice_focus,
+                "guidance_model": (
+                    "gemini" if guidance is not None else "deterministic-fallback"
+                ),
+            },
+        )
+        nodes.append(gap_node)
+        edges.append(
+            _edge(
+                edge_id=f"edge:gap:{gap.competency_id}:{attempt_uuid}",
+                edge_type="indicates_gap",
+                attempt_id=attempt_uuid,
+                source_node_id=competency_node_ids[gap.competency_id],
+                target_node_id=gap.skill_gap_node_id,
+                confidence=scorecard.overall_evidence_confidence,
+            )
+        )
+    retrieved_resources = resource_retriever(gaps) if gaps and resource_retriever else resources
     approved_resources = [
         LearningResource(
             resource_id=str(item["id"]),
@@ -567,8 +617,12 @@ def build_attempt_output(
             description=str(item["description"]),
             reviewer_status=str(item["reviewer_status"]),
             reviewer_id=str(item["reviewer_id"]) if item.get("reviewer_id") else None,
+            retrieval_scores={
+                str(key): float(value)
+                for key, value in (item.get("retrieval_scores") or {}).items()
+            },
         )
-        for item in resources
+        for item in retrieved_resources
     ]
     roadmap_result = (
         build_roadmap(
@@ -581,6 +635,13 @@ def build_attempt_output(
         if gaps
         else None
     )
+    if roadmap_result is not None and roadmap_personalizer is not None:
+        roadmap_result = roadmap_personalizer(
+            gaps,
+            roadmap_result,
+            approved_resources,
+            gap_guidance,
+        )
     roadmap_items = [
         {
             "attempt_id": str(attempt_uuid),
@@ -597,7 +658,13 @@ def build_attempt_output(
             **item.model_dump(mode="json"),
             "evidence_node_ids": evidence_ids[item.competency_id],
             "insufficiency_reasons": (
-                [] if item.sufficient_evidence else ["Coverage below 0.70"]
+                []
+                if item.sufficient_evidence
+                else (
+                    ["Not assessed before interview submission"]
+                    if item.score is None
+                    else ["Coverage below 0.70"]
+                )
             ),
         }
         for item in scorecard.competency_scores
@@ -621,6 +688,7 @@ def build_attempt_output(
         parent_scores = {
             str(item["competency_id"]): float(item["score"])
             for item in parent_scorecard.get("competency_scores", [])
+            if isinstance(item.get("score"), (int, float))
         }
         progress_metric = {
             "user_id": str(attempt["user_id"]),
@@ -629,10 +697,12 @@ def build_attempt_output(
             "metric_version": "comparable-evidence-progress-v1",
             "score_deltas": {
                 item.competency_id: round(
-                    item.score - parent_scores.get(item.competency_id, item.score),
+                    float(item.score)
+                    - parent_scores.get(item.competency_id, float(item.score)),
                     6,
                 )
                 for item in scorecard.competency_scores
+                if item.score is not None
             },
         }
     return AttemptOutput(
