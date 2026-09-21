@@ -1,6 +1,22 @@
-# FairHireAI / RoleReady AI: Beginner-Friendly Full Architecture and Viva Guide
+# FairHireAI: Complete Architecture, Implementation, Research, Operations, and Viva Guide
 
-## 0. Read this first: what is real, what is planned, and what must not be claimed
+This is the single authoritative A-to-Z project document. It consolidates the
+former project blueprint and architecture/viva guide and has been reconciled
+with the current repository. When a historical proposal, slide, or report
+conflicts with this document, the current code, versioned configuration, and
+database migrations take precedence.
+
+![FairHireAI system architecture](Architecture%20Diagram.png)
+
+> **Model-name clarification:** the architecture image uses `MAG-BERT-ARL` as a
+> research-family label. The repository implements and evaluates both MAG-BERT
+> and MAG-BERT-ARL, but the promoted production checkpoint is
+> `fi_v2_mag_bert`, selected by
+> `configs/fi_v2/selected_model.v1.json` because it achieved the best overall
+> validation result. ARL is an evaluated comparison, not the selected runtime
+> model.
+
+## 0. Read this first: current truth and claim boundaries
 
 FairHireAI is a student-facing mock-interview and placement-readiness system.
 It is intended to help a student practise for an IT or software role, understand
@@ -15,21 +31,41 @@ The project must not be described as a hiring system. It does not:
 - diagnose personality or emotion;
 - claim that a public video dataset contains technical-skill labels.
 
-There are three different maturity levels in the project:
+### Implemented in the repository
 
-1. **Implemented and pilot-tested:** First Impressions V2 verification,
-   ten-video preprocessing, Whisper, openSMILE, OpenFace, word alignment,
-   MAG-BERT/ARL training code, experiment configurations, and GPU smoke tests.
-2. **Designed but still to be implemented end to end:** JD/resume processing,
-   local LLM integration, question retrieval, Evidence Graph, readiness
-   scoring, roadmap RAG, backend/frontend integration, and reattempt flow.
-3. **Still requiring research validation:** final trained checkpoint, final
-   metrics, fairness audit, faculty-approved rubrics, LLM-to-human agreement,
-   technical-readiness calibration, roadmap usefulness, and consented student
-   evaluation.
+- React/Vite student portal with authentication, consent, role selection,
+  optional JD and resume upload, interview, processing status, reports,
+  roadmap, progress, reattempt, and deletion-request flows;
+- FastAPI API with JWT-scoped Supabase access, domain validation, RAG,
+  adaptive-interview orchestration, privacy controls, and reporting contracts;
+- Supabase Auth, PostgreSQL, PostgREST, pgvector-ready retrieval, private
+  Storage, RLS, RPC-backed durable queues, and migrations `0001` through `0017`;
+- six approved junior IT role templates, each containing six versioned
+  competencies;
+- hybrid question retrieval, dynamic Gemini generation, semantic validation,
+  deterministic anti-repetition checks, frozen question packages, and bounded
+  recovery when the available anchor pool is exhausted;
+- private asynchronous answer processing with FFmpeg, Whisper `small.en`,
+  openSMILE/eGeMAPSv02, OpenFace, word-level alignment, BERT, MAG fusion, the
+  selected checkpoint, constrained Gemini rubric evaluation, and Gradient SHAP;
+- Competency Evidence Graph, versioned scorecards, evidence-confidence gating,
+  skill gaps, approved-resource roadmaps, and reattempt progress;
+- offline FI V2 preprocessing and seven controlled model experiments, plus
+  validation comparison, ablations, robustness/fairness reporting, and model
+  selection with checksums;
+- local, deployment, seed, audit, preflight, and guarded real-service test
+  tooling.
 
-Always distinguish these levels in a viva. Do not say that a designed component
-is already working unless it has actually been implemented and tested.
+### Not yet a validated public deployment or completed human study
+
+The repository is implementation-complete for local and controlled deployment,
+but a public pilot still needs production HTTPS hosting, a supervised trusted
+GPU worker, final production Auth/email configuration, faculty calibration,
+consenting participants, independent evaluator labels, and a usability study.
+Do not invent those external results or describe them as completed.
+
+Always distinguish implemented software, recorded machine experiments, and
+future human validation in a viva.
 
 ## 1. The whole project in simple language
 
@@ -38,11 +74,11 @@ developer position.
 
 FairHireAI should:
 
-1. Read the JD and identify what the job expects.
+1. Load the selected approved role and, when provided, read the optional JD.
 2. Read the resume and identify what the student claims to know.
-3. Convert the JD into a small set of interview competencies.
-4. Retrieve suitable questions from a reviewed question bank.
-5. Personalize those questions using the resume and previous answers.
+3. Use the role's six competencies and safely adjust their priorities from the JD.
+4. Retrieve suitable reviewed question anchors with hybrid RAG.
+5. Generate and validate a fresh question from an anchor using permitted context.
 6. Record the student's video answer.
 7. convert the video into text, audio features, and visual features.
 8. Evaluate technical content using a fixed rubric and a constrained LLM.
@@ -56,11 +92,11 @@ FairHireAI should:
 The simplest mental model is:
 
 ```text
-JD tells us WHAT to assess.
+Approved role tells us WHAT to assess; an optional JD adjusts priority.
 Resume tells us WHAT to verify.
-Question bank provides TRUSTED questions.
-RAG finds the most relevant approved question or resource.
-LLM adapts and explains within strict rules.
+Question bank provides TRUSTED anchors and frozen standards.
+RAG finds the most relevant approved anchor or resource.
+Gemini generates, evaluates, and explains within strict rules.
 Multimodal ML analyses the recorded answer.
 Backend code calculates transparent scores.
 Evidence Graph records WHY every result exists.
@@ -70,7 +106,8 @@ Evidence Graph records WHY every result exists.
 
 Think of the project as a college assessment process.
 
-- **Question bank:** a cupboard containing reviewed question papers.
+- **Question bank:** a cupboard containing reviewed anchors, concepts, rubrics,
+  sources, and follow-up rules.
 - **RAG retriever:** a librarian who finds the correct question or textbook
   section for a specific need.
 - **LLM:** a teaching assistant who can rewrite a question naturally, evaluate
@@ -99,23 +136,20 @@ engineering, and other occupations.
 
 ### What our first product can validly assess
 
-Our first reliable scope should be:
+The implemented catalogue supports these six junior IT/software roles:
 
-**IT and software roles.**
+| Role | Six assessed competencies |
+|---|---|
+| Junior Backend Developer | programming fundamentals, API design, database reasoning, debugging/problem solving, system-design basics, technical communication |
+| Junior Frontend Developer | programming fundamentals, frontend engineering, web accessibility, debugging/problem solving, system-design basics, technical communication |
+| Junior Full-Stack Developer | programming fundamentals, frontend engineering, API design, database reasoning, debugging/problem solving, technical communication |
+| Junior Data Analyst | data analysis/SQL, statistics reasoning, data visualization, database reasoning, debugging/problem solving, technical communication |
+| Junior Machine Learning Engineer | programming fundamentals, ML fundamentals, model evaluation, ML engineering, debugging/problem solving, technical communication |
+| Junior DevOps / Cloud Engineer | cloud platform, CI/CD automation, observability/reliability, system-design basics, debugging/problem solving, technical communication |
 
-Examples include:
-
-- Backend Developer;
-- Frontend Developer;
-- Full-Stack Developer;
-- Data Analyst;
-- Machine Learning Engineer;
-- QA Automation Engineer;
-- DevOps or Cloud Engineer;
-- Cybersecurity Analyst.
-
-Junior Backend Developer is the main role for research validation because its
-competencies, questions, rubrics, and evaluator study can be controlled.
+Every role has exactly six versioned, reviewer-controlled competencies. Junior
+Backend Developer remains the primary research-validation example, but all six
+templates are implemented.
 
 ### Why we should not claim every occupation
 
@@ -123,18 +157,16 @@ Although O*NET and ESCO can identify skills for a nurse, accountant, mechanical
 engineer, teacher, or salesperson, FairHireAI does not yet contain validated
 domain rubrics and trusted question sources for all those occupations.
 
-The software may technically create a JD-derived practice interview for an
-unknown role, but it must be labelled:
-
-```text
-JD-derived practice profile - not faculty validated
-```
+The current product does not invent an unsupported runtime role or rubric. A JD
+is mapped only to the approved role catalogue and may adjust approved competency
+weights within configured limits. If no supported role can be identified, the
+student must choose one of the six approved roles before the assessment begins.
 
 Therefore, the honest answer is:
 
-> The architecture can be extended to other occupations, but the first
-> validated release focuses on IT/software roles. Junior Backend Developer is
-> the primary research-validation role.
+> The architecture can be extended to other occupations after domain experts
+> add reviewed role templates, rubrics, question anchors, and learning
+> resources. The current implementation supports six junior IT/software roles.
 
 ## 4. What exactly is "role and skill data"?
 
@@ -217,7 +249,7 @@ What broad computing knowledge should a student learn?
 Official technical documentation:
 What are the technically correct concepts and practices?
 
-RAG + local LLM:
+RAG + backend Gemini service:
 Retrieve the relevant technical context and automatically generate a structured
 question, expected concepts, rubric, and bounded follow-ups.
 
@@ -253,7 +285,7 @@ The candidate should build secure REST APIs using Spring Boot and JWT.
 5. Question-generation RAG retrieves relevant MDN and OWASP context about HTTP
    methods, authentication, authorization, input validation, and API-security
    risks.
-6. The local LLM generates a structured question:
+6. The backend Gemini service generates a structured question:
 
 ```text
 How would you design and secure a Spring Boot REST API that uses JWT?
@@ -274,11 +306,12 @@ token expiration
 8. The response also contains a 1-5 rubric and bounded follow-ups.
 9. Code automatically validates the schema, sources, competency, difficulty,
    duplication, and safety.
-10. The validated record is stored in the question bank. For the fixed research
-    set, faculty reviews the generated set before it is frozen.
+10. The validated record is stored as a reusable generation anchor. For the
+    research set, faculty reviews the generated set before it is published.
 
-At interview time, the system does not repeat all ten authoring steps. It simply
-retrieves the already approved question and rubric from the bank.
+At interview time, the system retrieves the approved anchor, asks Gemini for
+new wording, runs novelty and grounding checks, and freezes only the accepted
+question with the unchanged concepts, rubric, sources, and follow-up rules.
 
 ## 5. Exact sources and what we take from each one
 
@@ -319,7 +352,7 @@ Examples for IT roles:
 - Git documentation: version-control concepts.
 
 Question-generation RAG retrieves relevant passages from these sources, and the
-local LLM generates structured question packages containing the question,
+backend Gemini service generates structured question packages containing the question,
 expected concepts, rubric, and follow-ups. Automatic validation checks the
 result before storage. We do not copy random interview websites.
 
@@ -369,9 +402,8 @@ These are the first concrete sources to register in `docs/sources.csv`:
 | Docker Get Started | https://docs.docker.com/get-started/ | Container concepts and learning resources |
 | Git documentation | https://git-scm.com/doc | Version-control concepts and resources |
 | pgvector | https://github.com/pgvector/pgvector | PostgreSQL vector storage and similarity search |
-| BGE small embedding model | https://huggingface.co/BAAI/bge-small-en-v1.5 | Local text embeddings for semantic retrieval |
-| Ollama structured output | https://docs.ollama.com/capabilities/structured-outputs | Local LLM JSON-schema enforcement |
-| Qwen2.5 in Ollama | https://ollama.com/library/qwen2.5 | Candidate local instruction LLM family |
+| Gemini structured output | https://ai.google.dev/gemini-api/docs/structured-output | Backend-only schema-constrained generation and evaluation |
+| Gemini embeddings | https://ai.google.dev/gemini-api/docs/embeddings | Semantic embeddings used by the configured knowledge pipeline |
 
 Before distributing or deploying the product, record and verify the licence and
 permitted use for every ingested source and selected model. Linking to an
@@ -421,7 +453,7 @@ permitted-use note
 ```
 
 Roadmap records often need only metadata and a verified official URL. The
-student reads the material on the publisher's website; RoleReady AI does not
+student reads the material on the publisher's website; FairHireAI does not
 need to republish the entire resource.
 
 ## 6. How a competency is selected from a JD
@@ -442,7 +474,7 @@ Code first extracts the exact text and its character or page positions.
 
 ### Step 2: LLM structured extraction
 
-The local LLM receives the extracted text and a JSON schema. It returns:
+The backend Gemini service receives minimized extracted text and a JSON schema. It returns:
 
 ```json
 {
@@ -539,7 +571,7 @@ Total                       1.00
 
 Code checks:
 
-- five to eight competencies;
+- exactly the six competencies from the selected approved role template;
 - every competency has JD evidence;
 - no duplicates;
 - weights total 1.0;
@@ -621,10 +653,12 @@ vacancy.
 
 ## 7. How the question bank is generated automatically
 
-The question bank is not manually written question by question and is not
-downloaded as one dataset. It is generated from the JD, normalized competencies,
-retrieved official technical context, and a local LLM. Validated generated
-records are stored and reused as the bank.
+The question bank is not downloaded as one public dataset. It is a reviewed,
+versioned set of competency anchors built from normalized competencies,
+official technical context, and structured authoring. Each anchor freezes the
+expected concepts, rubric, bounded follow-up rules, reference explanation, and
+source mapping. At interview time Gemini generates fresh question wording from
+a retrieved anchor; the anchor remains the stable assessment standard.
 
 ### The simplest mental model
 
@@ -638,8 +672,8 @@ The question bank stores it.
 The evaluator later applies the same frozen marking package.
 ```
 
-The LLM does not generate only a rubric. When no suitable validated question
-already exists, it drafts the complete package:
+During offline authoring, Gemini does not generate only a rubric. It drafts the
+complete anchor package:
 
 ```text
 question
@@ -650,8 +684,8 @@ short reference explanation
 source-to-concept mapping
 ```
 
-If a matching validated package already exists, the interview retrieves it
-instead of generating it again.
+After validation, the package becomes a reusable anchor. The runtime retrieves
+the anchor but still generates a novel question for the current attempt.
 
 ### Step 1: create a competency specification
 
@@ -691,7 +725,7 @@ OWASP: authentication, authorization, and common API-security risks
 Spring documentation: Spring Security and request handling
 ```
 
-### Step 4: local LLM generates a structured question package
+### Step 4: backend Gemini service generates a structured question package
 
 The LLM receives only the JD evidence, normalized competency, seniority,
 retrieved context, general rubric template, and JSON schema. It generates the
@@ -806,7 +840,7 @@ For the fixed research set, a faculty or technically qualified reviewer checks
 the accepted packages or a defined representative sample. This supplies human
 evidence for question and rubric quality.
 
-### Step 10: store, reuse, and optionally review
+### Step 10: review, store, and reuse as a generation anchor
 
 If automatic validation passes, the record becomes:
 
@@ -814,7 +848,8 @@ If automatic validation passes, the record becomes:
 generated_validated_for_practice
 ```
 
-It is stored in the question bank and can be reused for a later matching JD.
+It is stored in the question bank and can be reused as an anchor for later
+matching interviews; its original wording is not a static runtime fallback.
 
 For the research-validation role, a fixed generated set is reviewed by faculty
 and then marked:
@@ -836,7 +871,7 @@ seeing the student's answer.
 
 ### Practical first bank size
 
-The local LLM can generate an initial batch for the Junior Backend Developer
+The backend Gemini service can generate an initial batch for the Junior Backend Developer
 validation role:
 
 ```text
@@ -858,7 +893,7 @@ RAG means **Retrieval-Augmented Generation**.
 In simple language, RAG is a smart search step in front of the LLM:
 
 ```text
-RoleReady AI's approved local library
+FairHireAI's approved local library
         -> search for relevant records
         -> send only those records to the LLM
         -> generate a grounded question, judgment, or roadmap
@@ -1056,29 +1091,26 @@ Seniority: Junior
 Resume claim: Implemented JWT authentication
 ```
 
-The complete decision flow is:
+The complete implemented decision flow is:
 
 ```text
-JD or confirmed role
-    -> select required competency
-    -> build query with seniority, resume, coverage, and exclusions
-    -> filter and search the validated question bank
-    -> is a suitable package found?
+confirmed approved role
+    -> deterministic selector chooses the highest-priority uncovered competency
+    -> hybrid RAG retrieves up to five validated anchors for that competency
+    -> exclude recently used anchors, scenarios, tasks, and question structures
+    -> Gemini generates a new core question from one anchor
+    -> preserve the anchor's expected concepts, rubric, source mapping,
+       follow-up rules, and reference explanation
+    -> deterministic novelty and policy validation
+    -> independent Gemini grounding/fairness validation
+    -> freeze and persist the accepted question package
+    -> ask the student
 
-YES:
-    load complete question package
-    -> optionally personalize wording with a constrained LLM
-    -> verify that competency, difficulty, concepts, and rubric did not change
-    -> freeze package with the attempt
-    -> ask student
-
-NO:
-    retrieve approved technical-source chunks
-    -> question-generation LLM creates a complete draft package
-    -> deterministic and grounded validation
-    -> store accepted package with its validation status
-    -> freeze package with the attempt
-    -> ask student
+If rejected:
+    try bounded recovery stages using another anchor, scenario, task form,
+    structure, and stricter novelty instruction
+    -> accept only a package that passes every check
+    -> otherwise return controlled content exhaustion; never show a static fallback
 ```
 
 The detailed retrieval steps are:
@@ -1102,10 +1134,14 @@ Junior API authentication question involving JWT and authorization
    authorization.
 4. Vector search finds semantically related questions even when wording differs.
 5. Combine the rankings.
-6. Select the highest-ranked question with an unused question ID.
-7. Load its fixed rubric and expected concepts.
-8. Give the selected question and resume claim to the LLM.
-9. The optional personalization LLM may personalize only the wording:
+6. Select a ranked unused anchor while considering the student's recent
+   same-role and same-competency history.
+7. Load its fixed rubric, expected concepts, source mapping, follow-up rules,
+   and reference explanation.
+8. Give the anchor and permitted JD, resume, earlier-answer, and history context
+   to Gemini.
+9. Gemini must create fresh wording while preserving the complete assessment
+   standard:
 
 ```text
 Bank:
@@ -1116,42 +1152,30 @@ Your resume mentions JWT authentication. Explain how you implemented
 authentication and authorization for your REST API.
 ```
 
-10. Code verifies that the competency, difficulty, and rubric ID did not change.
-11. Save the exact adapted question with the attempt.
+10. Code rejects exact repeats, near-verbatim variants, near-paraphrases,
+    repeated scenario/task combinations, source drift, rubric drift, and any
+    forbidden or unsupported claim.
+11. A separate Gemini validation call checks grounding, answerability,
+    junior-level difficulty, competency alignment, fairness, and non-repetition.
+12. Save only the accepted exact question and complete frozen package with the
+    attempt. The runtime question-generation call is required for each new core
+    question.
 
-If personalization is unnecessary, the retrieved validated question is asked
-directly. An LLM call is not required for every question.
+#### If no suitable approved anchor can produce a novel question
 
-#### If no approved question is found
-
-The system searches the technical-source collection using the competency,
-seniority, JD technology, and expected learning objective. It gives only the
-retrieved approved chunks to the question-generation LLM, which creates:
-
-- core question;
-- expected concepts;
-- 1-5 rubric;
-- bounded follow-ups and trigger conditions;
-- short reference explanation;
-- source-to-concept mapping.
-
-Deterministic code validates the schema, IDs, allowed values, duplicates, and
-policies. A grounded validator checks technical consistency, source support,
-difficulty, and alignment between the question, concepts, rubric, and
-follow-ups. The stored status reflects the validation level, for example:
-
-```text
-generated_validated_for_practice
-```
-
-The fixed research set requires the additional defined human-review procedure
-before it is treated as research-validated evidence.
+The runtime does not invent a new rubric, silently reuse a static question, or
+weaken the assessment standard. It runs a bounded recovery policy across the
+retrieved anchors and varies allowed scenario, task, and structure dimensions.
+When every candidate still violates novelty or grounding constraints, the API
+returns controlled content exhaustion (`HTTP 409`). Actual Gemini/provider
+unavailability is reported separately (`HTTP 503`). Expanding and reviewing the
+anchor pool is the durable solution for repeatedly exhausted competencies.
 
 #### Where the LLM appears in adaptive follow-ups
 
-After an answer, the engine first checks for a stored validated follow-up linked
-to the missing rubric criterion. If one exists, it asks that question directly.
-If none exists, a constrained follow-up LLM receives:
+After an answer, the engine checks whether the frozen follow-up rules identify a
+specific missing rubric criterion and whether the one-follow-up limit has not
+been used. A constrained Gemini call receives:
 
 ```text
 original question
@@ -1162,8 +1186,8 @@ follow-up schema and limits
 ```
 
 It may generate one bounded follow-up. Backend code verifies that the
-competency, difficulty, and rubric remain unchanged before the question is
-asked.
+competency, expected concepts, difficulty, and rubric remain unchanged before
+the follow-up is frozen and asked.
 
 #### What does not use an LLM
 
@@ -1188,19 +1212,16 @@ search.
 1. Profile-extraction LLM:
    extracted JD/resume text -> candidate structured facts
 
-2. Question-personalization LLM:
-   retrieved package + resume/previous context -> controlled wording
+2. Dynamic question-generation Gemini call:
+   retrieved anchor + permitted context and history -> fresh controlled wording
 
-3. Question-generation LLM:
-   retrieved technical chunks -> missing complete question package
-
-4. Follow-up LLM:
+3. Follow-up LLM:
    previous answer + missing criterion -> one bounded follow-up
 
-5. Evaluator LLM:
+4. Evaluator LLM:
    transcript + frozen package -> criterion judgments and evidence
 
-6. Roadmap LLM:
+5. Roadmap LLM:
    retrieved approved resources -> organized learning plan
 ```
 
@@ -1337,7 +1358,8 @@ Each passage receives the source, competency, topic, and difficulty context.
 
 ### Embedding
 
-A small local embedding model converts the passage into a numerical vector.
+The configured backend Gemini embedding model converts the passage into a
+384-dimensional numerical vector.
 
 Example:
 
@@ -1398,8 +1420,8 @@ The LLM is allowed to:
 
 1. extract structured JD information from already extracted text;
 2. form a controlled competency profile;
-3. personalize an approved question;
-4. generate an unreviewed draft when the bank has no coverage;
+3. dynamically generate a novel question from an approved anchor;
+4. validate that generated wording without changing the frozen standard;
 5. evaluate a transcript against a supplied rubric;
 6. organize retrieved resources into a cited roadmap.
 
@@ -1530,7 +1552,7 @@ PDF/DOCX/TXT text is extracted deterministically with source positions.
 ### Stage 3: role and competency profile
 
 A deterministic parser first extracts plain text and source positions from the
-JD and resume. A schema-constrained local LLM then converts that text into
+JD and resume. A schema-constrained backend Gemini call then converts that text into
 candidate structured facts:
 
 ```text
@@ -1547,11 +1569,11 @@ trusted without validation.
 
 ### Stage 4: question plan
 
-Question retrieval selects an approved core question and rubric for each
-competency. The LLM may personalize the wording. Missing-bank coverage produces
-an unreviewed controlled draft.
-
-Core questions and possible follow-ups are cached before the interview.
+Question retrieval selects validated anchors for each competency. Gemini
+generates fresh wording from an anchor, and deterministic plus semantic checks
+verify novelty, source grounding, difficulty, and preservation of the frozen
+assessment standard. Only accepted questions are persisted. There is no static
+fallback and no unreviewed question is shown to the student.
 
 ### Stage 5: adaptive question selection
 
@@ -1602,19 +1624,19 @@ transcript + frozen question package + retrieved technical context
 
 Multimodal research and delivery pipeline:
 aligned text + acoustic features + visual features
-    -> MAG-BERT-ARL Base Multimodal Interview Signal
+    -> selected MAG-BERT Base Multimodal Interview Signal
     -> Gradient SHAP attribution
     -> supporting model evidence and observable delivery indicators
 ```
 
 RAG and the LLM handle technical knowledge, question evaluation, gap reasoning,
-and roadmap organization. MAG-BERT-ARL handles synchronized text/audio/visual
+and roadmap organization. The selected MAG-BERT handles synchronized text/audio/visual
 patterns. Neither pipeline replaces the other, and the multimodal signal does
 not determine technical correctness.
 
 ### Stage 7: Whisper transcription
 
-Whisper-timestamped returns:
+Whisper returns:
 
 - transcript;
 - word start time;
@@ -1702,7 +1724,7 @@ and visual information should modify each word.
 BERT processes the fused sequence and produces a CLS representation of the
 answer.
 
-### Stage 13: ARL
+### Stage 13: model selection and ARL research comparison
 
 During training:
 
@@ -1710,8 +1732,11 @@ During training:
 - the adversary gives more weight to high-loss examples;
 - the learner is forced to improve on difficult regions.
 
-During the live interview, the trained learner produces the prediction. The
-adversary is not used as a student-facing decision maker.
+ARL was implemented in three experimental variants to test whether emphasizing
+difficult examples improved the selected metrics. It improved some difficult
+subsets but had higher overall validation error than full MAG-BERT. Therefore,
+the live worker loads `fi_v2_mag_bert`; no ARL adversary is active during a
+student assessment.
 
 The safe output name is:
 
@@ -1726,15 +1751,16 @@ annotations, not ground-truth nervousness, genuine confidence, or technical
 competence. Therefore, the deployed output cannot be renamed `confidence`,
 `nervousness`, `employability`, or `technical readiness`.
 
-The reason for retaining MAG-BERT-ARL is specific:
+The reason for retaining MAG-BERT-ARL in the repository is specific:
 
-1. it is the trained multimodal research component of the project;
+1. it is an implemented multimodal research comparison;
 2. it tests whether synchronized text/audio/visual fusion improves prediction
    of the FI V2 interview label;
 3. ARL tests whether reweighting difficult training examples improves the
    selected metrics;
-4. it supplies a separate supporting signal and model-attribution artefacts;
-5. it does not replace rubric-grounded technical assessment.
+4. the winning MAG-BERT checkpoint supplies the separate supporting signal and
+   model-attribution artefacts;
+5. neither MAG-BERT nor ARL replaces rubric-grounded technical assessment.
 
 ### Stage 14: Gradient SHAP
 
@@ -1745,7 +1771,7 @@ Its exact flow is:
 
 ```text
 aligned text/audio/visual features
-    -> MAG-BERT-ARL prediction
+    -> selected MAG-BERT prediction
     -> Gradient SHAP attribution values
     -> aggregate by modality, word, and time interval
     -> store in the Evidence Graph
@@ -1769,14 +1795,14 @@ It explains model influence. It does not prove:
 - fairness;
 - hiring suitability.
 
-RoleReady AI therefore has two different explanations:
+FairHireAI therefore has two different explanations:
 
 ```text
 Technical explanation:
 Rubric + transcript evidence explain why a technical score or gap was produced.
 
 Multimodal explanation:
-Gradient SHAP explains which inputs influenced the MAG-BERT-ARL signal.
+Gradient SHAP explains which inputs influenced the selected MAG-BERT signal.
 ```
 
 SHAP does not explain the LLM's technical judgment, and the rubric explanation
@@ -1784,7 +1810,7 @@ does not explain MAG-BERT's internal prediction.
 
 ### Stage 15: LLM rubric evaluation
 
-The local LLM receives:
+The backend Gemini evaluator receives:
 
 - role;
 - competency;
@@ -2284,7 +2310,7 @@ load MAG-BERT learner
 -> infer
 -> release memory
 
-load local LLM
+call backend Gemini service
 -> return rubric JSON or roadmap
 -> release memory
 ```
@@ -2375,7 +2401,9 @@ The role or seniority could not be determined. Please confirm or edit the role.
 
 ### No approved question
 
-Generate a controlled unreviewed practice question or report missing coverage.
+Run bounded recovery across approved anchors. If no novel grounded question
+passes validation, report content exhaustion and expand/review the anchor pool;
+never show an unreviewed or static fallback question.
 
 ### Poor audio
 
@@ -2431,23 +2459,24 @@ Recorded completed work:
 - 36 question packages independently validated and embedded; all 36 passed;
 - optional-JD role detection and approved-weight adaptation;
 - real PDF/DOCX/TXT resume extraction and evidence claims;
-- bounded adaptive question selection with frozen question/rubric/source
-  snapshots and optional Gemini personalization;
+- bounded adaptive question selection with mandatory dynamic Gemini generation,
+  anti-repetition recovery, and frozen question/rubric/source snapshots;
 - per-answer Whisper/openSMILE/OpenFace/MAG-BERT worker and constrained Gemini
   rubric evaluator;
 - observable delivery measures that never infer emotion or personality;
 - Competency Evidence Graph, transparent scorecard, confidence gating,
   evidence-backed skill gaps, approved-resource roadmap, and reattempt progress;
-- Supabase Auth/RLS/private-storage/privacy schema live through migration 0014,
-  including frozen evidence, answer analyses, worker/deletion claims,
-  processing artifacts, qualified processing queries, and anonymous-privilege
-  hardening;
+- Supabase Auth/RLS/private-storage/privacy schema represented by repository
+  migrations `0001` through `0017`, including frozen evidence, answer analyses,
+  worker/deletion claims, processing artifacts, qualified processing queries,
+  authenticated report enqueueing, and privilege hardening;
 - React/Lovable frontend connected to the real API contract, including auth,
   optional JD, role catalogue, consent, resume, interview, processing, report,
   skill gaps, roadmap, progress, and deletion request pages;
-- 99 Python tests, 45 frontend tests, Ruff, ESLint, and production frontend
-  build passing.
-- guarded real-service E2E passed with a disposable confirmed user, 15 resume
+- automated Python and frontend suites, linting, production build checks, and
+  guarded deployment preflights;
+- the last recorded guarded real-service E2E used a disposable confirmed user,
+  15 resume
   claims, 12 processed core/follow-up answers, 108 evidence nodes, scorecard,
   progress history, and verified account deletion.
 
@@ -2465,26 +2494,25 @@ Recorded pending work:
 
 ### Which type of RAG are you using?
 
-> We plan to use graph-guided contextual hybrid RAG. The Evidence Graph provides
+> We use graph-guided contextual hybrid RAG. The Evidence Graph provides
 > a verified competency or skill-gap context. Each stored question or resource
 > has contextual metadata such as role, competency, difficulty, source, and
 > review status. PostgreSQL full-text search finds exact terms, while pgvector
 > semantic search finds equivalent meanings. We combine both rankings and allow
-> only approved records. A local LLM then adapts the selected question or
+> only approved records. The backend Gemini service then generates the question or
 > organizes the selected resources.
 
 ### What is Question RAG, exactly?
 
-> Question RAG means searching our versioned question bank before asking the
-> LLM to generate anything. We filter by competency, seniority, difficulty, and
-> review status, then combine keyword and semantic search. We load the selected
-> question's complete fixed package. If useful, a constrained LLM personalizes
-> only its wording with resume or previous-answer context, and code verifies
-> that the competency, expected concepts, difficulty, and rubric do not change.
-> If no suitable package exists, Question RAG retrieves approved technical
-> passages and a question-generation LLM drafts the complete package for
-> validation. PostgreSQL, pgvector, and backend code perform the search; the LLM
-> operates after retrieval.
+> Question RAG searches the versioned anchor bank by competency, seniority,
+> difficulty, review status, keywords, and semantic similarity. The selected
+> anchor supplies the approved concepts, rubric, sources, follow-up rules, and
+> reference explanation. Gemini then generates fresh wording for the current
+> interview using only permitted context. Code and an independent validation
+> call reject repetition, source drift, rubric drift, or unfair content. The
+> accepted package is frozen with the attempt. If bounded recovery cannot find
+> a novel valid question, the API reports content exhaustion instead of showing
+> a static fallback.
 
 ### What is Roadmap RAG, exactly?
 
@@ -2496,7 +2524,7 @@ Recorded pending work:
 
 ### From where does RAG retrieve?
 
-> RAG retrieves from RoleReady AI's pre-built local collections, not from an
+> RAG retrieves from FairHireAI's pre-built local collections, not from an
 > unrestricted live internet search. We first register and ingest
 > licence-compliant O*NET/ESCO role data, selected official technical passages
 > or our summaries from sources such as MDN, OWASP, Spring, PostgreSQL, Python,
@@ -2525,13 +2553,12 @@ Recorded pending work:
 
 ### Where do interview questions come from?
 
-> They do not come from First Impressions V2. Question-generation RAG retrieves
-> relevant context from JD competencies, O*NET/ESCO terminology, CS2023
-> learning areas, and official technical documentation. The local LLM
-> automatically generates the question, expected concepts, 1-5 rubric, bounded
-> follow-ups, and source IDs in JSON. Code validates and stores the result.
-> Faculty reviews the fixed research set or representative samples rather than
-> manually writing every question.
+> They do not come from First Impressions V2. Offline authoring uses approved
+> competency definitions and official technical sources to create and validate
+> anchors containing expected concepts, rubric levels, follow-up rules, source
+> mappings, and reference explanations. During every interview step, hybrid RAG
+> retrieves anchors and Gemini dynamically generates a new question whose
+> assessment standard must remain identical to the selected anchor.
 
 ### Does the LLM generate only expected concepts and a rubric?
 
@@ -2565,7 +2592,7 @@ Recorded pending work:
 
 > The JD is parsed into role, seniority, responsibilities, skills, and tools.
 > These terms are normalized using O*NET, ESCO, a local skill dictionary, and
-> existing templates. Related skills are grouped into five to eight assessable
+> existing templates. The JD maps to exactly the selected role template's six
 > competencies. Initial weights depend on required-versus-preferred status,
 > repetition, responsibility importance, and template defaults. Code validates
 > the result, and the student confirms it.
@@ -2573,12 +2600,12 @@ Recorded pending work:
 ### Will it work for every occupation?
 
 > O*NET and ESCO cover many occupations, so the mapping architecture is
-> extensible. However, our first validated question, rubric, scoring, and
-> resource collection is for IT/software roles. Junior Backend Developer is the
-> main research role. An unknown role may receive a JD-derived practice profile,
-> but it is labelled unvalidated until domain experts review it.
+> extensible. However, the current implementation supports only six approved
+> junior IT/software roles. Junior Backend Developer is the main research role.
+> An unsupported role is not invented at runtime; it requires a reviewed role
+> template, anchors, rubrics, and resources before it can be added.
 
-### Are you using a local LLM or an API?
+### Which LLM provider is implemented?
 
 > The implemented provider is Gemini through a backend-only adapter. Question
 > wording uses a validated frozen package, and transcript evaluation uses its
@@ -2596,9 +2623,10 @@ Recorded pending work:
 
 ### Why use a standard bank and an LLM?
 
-> The bank provides reviewed technical correctness, stable rubrics, and
-> reproducibility. The LLM provides controlled JD/resume personalization and
-> coverage for new competencies. Retrieval always tries the trusted bank first.
+> The anchor bank provides reviewed technical correctness, stable rubrics,
+> sources, and reproducibility. Gemini provides fresh, context-aware wording
+> while deterministic and semantic validators preserve that standard. The bank
+> is searched before generation, and unsupported competencies are not invented.
 
 ### Why is the Evidence Graph needed?
 
@@ -2607,20 +2635,20 @@ Recorded pending work:
 > judgment, score, gap, resource, roadmap, and later improvement. RAG uses the
 > graph's verified context rather than a vague prompt.
 
-### If RAG and the LLM do the technical work, why use MAG-BERT-ARL?
+### If RAG and Gemini do the technical work, why use MAG-BERT and compare ARL?
 
-> They solve different problems. RAG and the constrained LLM work with
+> They solve different problems. RAG and constrained Gemini calls work with
 > technical text: questions, trusted context, rubric judgments, gaps, and
-> roadmap resources. MAG-BERT-ARL is the trained multimodal research component.
-> It fuses synchronized BERT text, openSMILE acoustic, and OpenFace visual
-> features and predicts the First Impressions interview label. ARL tests whether
-> emphasizing difficult training examples improves the selected metrics. Its
-> output remains a separate Base Multimodal Interview Signal and does not decide
-> technical correctness or readiness.
+> roadmap resources. MAG-BERT fuses synchronized BERT text, openSMILE acoustic,
+> and OpenFace visual features and predicts the First Impressions interview
+> label. ARL variants test whether emphasizing difficult training examples helps.
+> Full MAG-BERT won the overall validation comparison and is the selected
+> checkpoint. Its output remains a separate Base Multimodal Interview Signal and
+> never decides technical correctness or readiness.
 
 ### Where is SHAP explainability used?
 
-> Gradient SHAP is applied after MAG-BERT-ARL inference. It attributes the base
+> Gradient SHAP is applied after selected MAG-BERT inference. It attributes the base
 > multimodal prediction to text, acoustic, and visual inputs and to influential
 > words or time intervals. Those attribution records are stored in the Evidence
 > Graph and may be shown as a simplified modality/time explanation. SHAP
@@ -2648,7 +2676,7 @@ Recorded pending work:
 
 ### Why is offline model development shown?
 
-> It explains where the live MAG-BERT-ARL checkpoint comes from. FI V2 is
+> It explains where the live selected MAG-BERT checkpoint comes from. FI V2 is
 > preprocessed, models and ablations are trained, metrics and fairness are
 > evaluated, SHAP is checked, and only the selected checkpoint is promoted to
 > live inference. This work does not happen during the student's interview.
@@ -2670,9 +2698,10 @@ Recorded pending work:
 > MAG-BERT-ARL variants. The selected checkpoint produces only a Base
 > Multimodal Interview Signal, not technical readiness or hiring probability.
 >
-> In the online flow, the student authenticates, gives consent, and uploads a JD
-> and resume. Deterministic parsers preserve the original source spans. A local
-> LLM converts the extracted text into candidate structured role, seniority,
+> In the online flow, the student authenticates, gives consent, selects an
+> approved role, and may upload a JD and resume. Deterministic parsers preserve
+> the original source spans. A schema-constrained backend Gemini call converts
+> the extracted text into candidate structured role, seniority,
 > skill, project, internship, certification, achievement, and resume-claim
 > records. Code verifies each source span, normalizes terms using the skill
 > catalogue, rejects unsupported facts, groups skills into assessable
@@ -2682,16 +2711,17 @@ Recorded pending work:
 > Question retrieval then searches the approved question bank using competency,
 > seniority, difficulty, resume context, and review status. Keyword search finds
 > exact terms and vector search finds similar meanings. The selected question's
-> fixed rubric is loaded. The local LLM may personalize the wording using a
-> traceable resume claim or previous answer. If no approved question exists, it
-> can generate a schema-validated draft that is clearly marked unreviewed.
+> fixed rubric is loaded. The backend Gemini service must generate fresh wording
+> from that anchor using permitted resume, JD, earlier-answer, and question-history
+> context. Deterministic and independent semantic checks reject drift or repetition,
+> and only an accepted question is frozen for the attempt.
 >
 > During the interview, the adaptive engine asks one core question per
 > competency. Each answer enters two parallel pipelines. The technical pipeline
 > gives the transcript, fixed rubric, expected concepts, and retrieved official
-> context to a constrained LLM, which returns timestamped criterion evidence.
+> context to a constrained Gemini evaluator, which returns timestamped criterion evidence.
 > The multimodal pipeline processes aligned Whisper text, openSMILE acoustic,
-> and OpenFace visual features with MAG-BERT-ARL. It produces only a separate
+> and OpenFace visual features with the selected MAG-BERT checkpoint. It produces only a separate
 > Base Multimodal Interview Signal. Gradient SHAP attributes that model signal
 > to modalities and time spans. Backend code also derives observable delivery
 > indicators such as pace, pauses, fillers, voice-energy consistency,
@@ -2709,7 +2739,7 @@ Recorded pending work:
 > For an approved gap, graph-guided contextual hybrid RAG searches the separate
 > learning-resource repository. Metadata filters remove unapproved or
 > unsuitable resources, keyword search finds exact concepts, and vector search
-> finds semantic equivalents. The local LLM receives only the retrieved
+> finds semantic equivalents. The backend Gemini service receives only the retrieved
 > resources and organizes them into a cited plan. Unknown resource IDs are
 > rejected, and missing resources are reported rather than invented.
 >
@@ -2725,26 +2755,27 @@ Recorded pending work:
 ## 26. Final one-minute answer
 
 > FairHireAI is an evidence-backed placement-readiness system for
-> IT/software interview practice. The JD defines the competencies, the resume
-> provides claims to verify, and a reviewed question bank supplies the trusted
-> questions and rubrics. We retrieve approved questions first and use Gemini
-> only for controlled personalization and frozen-rubric transcript evaluation.
-> Video answers enter two parallel pipelines: a constrained LLM applies the
-> frozen technical rubric to the transcript, while MAG-BERT-ARL processes
+> IT/software interview practice. An approved role defines the six competencies,
+> an optional JD adjusts their priority, and the resume provides claims to verify.
+> Hybrid RAG retrieves reviewed anchors, and Gemini dynamically generates a new
+> validated question while preserving each anchor's concepts, rubric, sources,
+> and follow-up rules. Video answers enter two parallel pipelines: constrained
+> Gemini evaluation applies the frozen technical rubric to the transcript, while
+> the selected MAG-BERT checkpoint processes
 > synchronized text, acoustic, and visual features as a separate multimodal
 > research signal. Gradient SHAP explains only that model signal, and backend
 > code produces observable delivery indicators without claiming nervousness or
 > genuine confidence. The Evidence Graph connects every result to its source.
 > For verified gaps, graph-guided contextual hybrid RAG combines metadata
 > filtering, keyword search, and pgvector semantic search to retrieve approved
-> learning resources. The LLM organizes only those resources into a cited
+> learning resources. Gemini organizes only those resources into a cited
 > roadmap, and a reattempt measures improvement. The system supports student
 > self-improvement and never makes a hiring decision.
 
 ## 27. Final completed product and outputs
 
-This is the target output after the entire planned project is implemented and
-validated. It is separate from the truthful current status in Section 23.
+This section describes the implemented output contract. Human calibration,
+public-pilot deployment, and usability results remain external validation work.
 
 ### 27.1 Working student software
 
@@ -2857,7 +2888,7 @@ emotion, or hiring probability.
 
 ### 27.6 Multimodal model and SHAP output
 
-MAG-BERT-ARL produces a separate research/supporting output:
+The selected MAG-BERT checkpoint produces a separate research/supporting output:
 
 ```text
 Base Multimodal Interview Signal
@@ -2874,7 +2905,7 @@ Approximate model influence: text 61%, audio 26%, visual 13%
 Influential interval: 12.4-15.1 seconds
 ```
 
-SHAP explains the MAG-BERT-ARL prediction only. Rubric criteria and transcript
+SHAP explains the selected MAG-BERT prediction only. Rubric criteria and transcript
 evidence separately explain the technical score.
 
 ### 27.7 Personalized roadmap output
@@ -2925,7 +2956,7 @@ The working system includes:
 - Gemini backend provider with schema-constrained prompts and explicit consent;
 - FFmpeg and Whisper transcription;
 - openSMILE and OpenFace feature extraction;
-- MAG-BERT and MAG-BERT-ARL inference;
+- selected MAG-BERT inference, with MAG-BERT-ARL retained for research comparison;
 - Gradient SHAP;
 - Competency Evidence Graph;
 - background job worker;
@@ -2958,7 +2989,7 @@ relevance, and student usability.
 1. Working local software product.
 2. Real trained checkpoints and inference pipeline.
 3. Two functioning RAG pipelines.
-4. Local constrained LLM integration.
+4. Backend-only constrained Gemini integration.
 5. Auditable Competency Evidence Graph.
 6. Evidence-backed student report.
 7. Verified personalized roadmaps.
@@ -2973,3 +3004,436 @@ The final product is:
 > judgments, identifies verified competency gaps, retrieves approved learning
 > resources, and measures improvement through reattempts without ranking
 > candidates or making hiring decisions.
+
+## 28. Exact scoring formulas and decision thresholds
+
+All normalized metrics are in `[0, 1]`. Formula versions and supporting
+Evidence Graph node IDs must be stored with the result. A missing metric is not
+silently replaced with zero; applicability and evidence sufficiency are
+explicit.
+
+### 28.1 Competency score and coverage
+
+For each of the six role competencies, the evaluator returns rubric evidence
+and backend code stores a normalized competency score. Evidence is sufficient
+only when a score exists and coverage is at least `0.70`.
+
+```text
+sufficient_competency_evidence = score exists AND coverage >= 0.70
+```
+
+### 28.2 Technical Readiness
+
+The weighted competency rubric match is normalized over assessed competencies.
+
+```text
+Technical Readiness =
+    0.35 * weighted competency rubric match
+  + 0.25 * answer depth and correctness
+  + 0.20 * technical follow-up quality
+  + 0.20 * resume/project consistency
+```
+
+### 28.3 Communication Clarity
+
+```text
+Communication Clarity =
+    0.30 * answer relevance
+  + 0.25 * answer structure
+  + 0.20 * answer completeness
+  + 0.15 * pace and filler quality
+  + 0.10 * transcript confidence
+```
+
+Pace and filler quality is an observable delivery measure, not a psychological
+judgment.
+
+### 28.4 Interview Response Quality
+
+```text
+Interview Response Quality =
+    0.35 * follow-up responsiveness
+  + 0.30 * answer completeness
+  + 0.20 * resume/project consistency
+  + 0.15 * professionalism rubric
+```
+
+### 28.5 Evidence confidence and Placement Readiness
+
+```text
+overall evidence confidence = evidence confidence * signal quality
+
+Placement Readiness =
+    0.50 * Technical Readiness
+  + 0.25 * Communication Clarity
+  + 0.25 * Interview Response Quality
+```
+
+Placement Readiness is withheld when any competency lacks sufficient evidence
+or overall evidence confidence is below `0.60`. The experimental Base
+Multimodal Interview Signal is excluded from this formula.
+
+### 28.6 Skill gaps and roadmap eligibility
+
+A competency becomes an evidence-backed skill gap when its score is below the
+configured target (`0.70` in the current domain logic), coverage is sufficient,
+and supporting evidence IDs exist. A roadmap item must reference both that gap
+and a reviewed resource. Gemini may reorder or explain approved items but may
+not alter numeric scores, create gaps, or invent resources.
+
+## 29. Runtime components and ownership
+
+| Component | Owns | Must not own |
+|---|---|---|
+| React student portal | User interaction, recording, signed uploads, status polling, reports, privacy controls | Server secrets, model checkpoints, trusted writes |
+| Supabase Auth | Student identity and JWT issuance | Interview policy or scoring |
+| FastAPI | Domain validation, role/JD mapping, RAG orchestration, dynamic question generation, public API contracts | Supabase service secret or GPU model assets |
+| Supabase PostgreSQL/PostgREST | Attempts, consent, roles, knowledge, evidence, scores, roadmap, progress, RLS | Raw public media exposure |
+| Private Object Storage | JD/resume/video and derived artifact objects under scoped keys | Public unauthenticated access |
+| Durable processing queues/RPCs | Idempotent answer/report jobs, claims, retries, status | Browser-side privileged execution |
+| Trusted CUDA worker | Media download, feature extraction, checkpoint inference, rubric evaluation, evidence/report persistence, deletion execution | Public inbound student traffic |
+| Gemini backend adapter | Structured generation, independent question validation, constrained rubric evaluation, roadmap wording | Final arithmetic, unapproved sources, direct video processing |
+
+The browser receives only publishable Supabase configuration. FastAPI accepts
+the student's Supabase JWT and uses user-scoped PostgREST requests so RLS stays
+authoritative. The trusted worker alone holds the server credential and claims
+jobs outbound over HTTPS.
+
+## 30. API, persistence, and versioned artifacts
+
+### 30.1 Public API capabilities
+
+The FastAPI application exposes grouped contracts for:
+
+- health and runtime capabilities;
+- role catalogue listing, role details, and optional-JD role detection;
+- JD and resume extraction with source-preserving evidence;
+- consent creation and deletion requests;
+- assessment creation, reading, lifecycle transitions, listing, reattempts, and
+  progress;
+- next-question generation with frozen packages;
+- answer submission, processing enqueue/status, attempt completion, and report
+  retrieval;
+- knowledge question generation/search and approved-resource search;
+- Evidence Graph validation, scorecard calculation, resume-evidence validation,
+  and roadmap planning.
+
+API input/output models are Pydantic contracts. IDs, enum values, score ranges,
+source IDs, evidence references, and ownership are validated at boundaries.
+
+### 30.2 Supabase migration history
+
+The repository includes migrations `0001` through `0017`. Together they cover:
+
+1. product foundation;
+2. private storage and privacy;
+3. optional job descriptions;
+4. explicit Data API grants;
+5. database-advisor hardening;
+6. multi-role catalogue;
+7. student-journey RPCs;
+8. processing queue;
+9. trusted knowledge layer;
+10. knowledge foreign-key indexes;
+11. Gemini question authoring;
+12. worker execution and frozen evidence;
+13. answer-analysis privilege hardening;
+14. qualified processing RPC columns;
+15. consent-gated JD image/OCR uploads;
+16. authenticated-table privilege hardening;
+17. authenticated report-enqueue RPC.
+
+Repository presence does not prove that every migration has been applied to a
+particular remote project; deployment preflight verifies the target environment.
+
+### 30.3 Records that must remain versioned
+
+- role template and competency weights;
+- consent text/version and timestamps;
+- JD/resume extraction and source spans;
+- question anchor, generated wording, expected concepts, rubric, follow-up
+  rules, sources, generation/validation metadata, and novelty history;
+- answer object reference, processing job, transcript, features, model inputs,
+  selected checkpoint checksum, model output, and SHAP artifact;
+- evaluator provider/model/prompt/schema versions and criterion evidence;
+- Evidence Graph nodes/edges and provenance;
+- formula version, thresholds, scorecard, insufficiency reasons, gaps, roadmap,
+  report, parent reattempt, and progress deltas.
+
+### 30.4 Evidence Graph vocabulary
+
+Important node types include role requirement, competency, resume claim,
+question, answer segment, rubric criterion, model/multimodal evidence, score,
+skill gap, learning resource, roadmap item, and progress metric. Edges express
+relationships such as `requires`, `claims`, `assesses`, `answered_by`,
+`supports`, `contradicts`, `produces`, `identifies`, `addressed_by`,
+`references`, and `measures_progress`. Every node and edge needs an ID,
+attempt/provenance context, timestamps, and confidence where applicable.
+
+## 31. Offline research and model reproducibility
+
+### 31.1 Dataset boundary
+
+First Impressions V2 is used only to reproduce and compare a multimodal
+interview signal. It does not contain ground-truth technical competence,
+placement readiness, genuine confidence, nervousness, or hiring outcome.
+
+The verified project split contains `5,995` usable training recordings and
+`1,999` usable validation recordings. Six no-word/silent cases are explicitly
+logged and excluded. Raw dataset media remains outside Git.
+
+### 31.2 Preprocessing contract
+
+```text
+video
+  -> FFmpeg normalization
+  -> Whisper small.en transcript and word timestamps
+  -> openSMILE eGeMAPSv02, 88 acoustic values per aligned interval
+  -> OpenFace 2.2, 709 retained visual values per valid aligned frame
+  -> word-level audio/visual alignment
+  -> BERT fast-tokenizer WordPiece mapping
+  -> cached tensors, quality flags, manifests, and checksums
+```
+
+Special BERT tokens and padding receive zero modality vectors. Missing or poor
+modalities are flagged; they are not fabricated.
+
+### 31.3 Experiments and selected checkpoint
+
+Seven recorded experiments cover text-only BERT, text+audio, text+visual, full
+MAG-BERT, and three ARL/loss variants. The selection rule is lowest validation
+MSE confirmed by MAE, RMSE, and Pearson comparison.
+
+| Promoted run | Modalities | Loss | MAE | RMSE | Pearson | Threshold F1 |
+|---|---|---|---:|---:|---:|---:|
+| `fi_v2_mag_bert` | text + audio + visual | MSE | 0.094888 | 0.119559 | 0.596759 | 0.737882 |
+
+The selected checkpoint SHA-256 is recorded in
+`configs/fi_v2/selected_model.v1.json`. The selection status is provisional
+performance winner pending external student/faculty validation. The worker must
+verify the checkpoint, scaler, dataset identity, and related artifact checksums
+before inference.
+
+### 31.4 Evaluation outputs
+
+- MAE, RMSE, MSE/loss, Pearson correlation, threshold accuracy, and threshold F1;
+- text/audio/visual ablations and MAG-BERT versus ARL comparison;
+- permitted subgroup error/robustness audit without inferring demographics from
+  student media;
+- Gradient SHAP by modality, token/word, and time interval;
+- preprocessing audit, experiment configuration, history, seed, environment,
+  manifest, and checksum provenance.
+
+Human-study evaluation must separately measure faculty agreement with rubric
+judgments, retrieval relevance, roadmap usefulness, explanation clarity,
+student trust, and usability. These results cannot be inferred from FI V2.
+
+## 32. Repository and script reference
+
+```text
+backend/       FastAPI routes, schemas, domain rules, adapters, repositories
+configs/       Roles, competency library, knowledge, model and experiment config
+deployment/    Docker assets, Supabase migrations and production runbook
+docs/          This guide, architecture/UML, sources and operational references
+frontend/      React/TypeScript student portal
+ml_service/    Alignment, datasets, MAG/ARL models, training, inference, SHAP
+outputs/       Versioned non-sensitive experiment and validation summaries
+scripts/       Controlled setup, seed, training, audit, worker and E2E commands
+tests/         Backend, ML, retrieval, privacy, security and contract tests
+```
+
+### 32.1 Script groups
+
+- **Local product:** `start_local.ps1`, `stop_local.ps1`,
+  `configure_local_frontend.ps1`, `preflight_product.py`.
+- **Secrets:** `set_gemini_key.ps1`, `set_supabase_secret.ps1`; populated
+  secrets remain outside Git.
+- **Knowledge/RAG:** `seed_knowledge_sources.py`,
+  `seed_validated_question_bank.py`, `seed_initial_knowledge.py`,
+  `embed_knowledge_with_gemini.py`, `validate_knowledge_layer.py`,
+  `validate_question_bank_with_gemini.py`.
+- **FI V2 preparation:** `build_fi_manifest.py`, `prepare_fi_pilot.py`,
+  `transcribe_fi_pilot.py`, `extract_egemaps_pilot.py`,
+  `extract_openface_pilot.py`, `align_fi_pilot.py`,
+  `preprocess_fi_dataset.py`, `cache_bert_model.py`.
+- **Training/evaluation:** `train_fi_model.py`, `smoke_train_fi_model.py`,
+  `smoke_training_engine.py`, `summarize_fi_experiments.py`,
+  `audit_fi_annotations.py`, `audit_fi_preprocessing.py`,
+  `audit_fi_models.py`, `explain_fi_checkpoint.py`.
+- **Runtime/deployment:** `run_fairhire_worker.py`,
+  `preflight_deployment.py`, `live_product_e2e.py`,
+  `live_two_user_security_e2e.py`, and the dynamic-question/Gemini/RAG smoke
+  checks.
+
+Each script has a specific operational purpose. They are not disposable files;
+the preprocessing, training, seeding, audit, and guarded live-test scripts are
+part of reproducibility and deployment verification.
+
+## 33. Setup, deployment, testing, and failure handling
+
+### 33.1 Configuration boundaries
+
+Start from `.env.example`, `frontend/.env.example`,
+`deployment/backend.env.example`, and `deployment/worker.env.example`. Never put
+the Supabase service credential, Gemini key, private storage secret, or model
+path into a browser-visible `VITE_*` variable.
+
+The detailed local procedure is in `CLONE_AND_RUN.md`; ML setup is in
+`ml_pipeline_runbook.md`; production topology and guarded live checks are in
+`../deployment/PRODUCTION_RUNBOOK.md`.
+
+### 33.2 Deployment topology
+
+- static React portal on an HTTPS frontend host;
+- public HTTPS FastAPI container with Gemini key but no Supabase server secret;
+- Supabase Auth/PostgreSQL/Storage/queue as the managed data plane;
+- separately supervised trusted CUDA worker on the GPU host with outbound-only
+  job claiming and private artifact access.
+
+The GPU worker is not a public API. Private media is transferred through scoped
+storage operations, and verified results are persisted before job completion.
+
+### 33.3 Verification layers
+
+- domain/unit tests for roles, extraction, RAG, graph, formulas, roadmap, and
+  progress;
+- route/contract tests for API payloads and lifecycle transitions;
+- ML shape, mask, alignment, checkpoint, inference, audit, and SHAP tests;
+- RLS, privilege, two-user isolation, object ownership, and deletion tests;
+- frontend component/journey tests, linting, and production build;
+- guarded live preflights and disposable-user E2E only with explicit safety
+  flags.
+
+Test totals change as the code evolves, so this guide intentionally does not
+freeze a count. The current test runner is the source of truth.
+
+### 33.4 Safe failure behavior
+
+| Failure | Required behavior |
+|---|---|
+| Unsupported/unclear JD | Ask the student to confirm an approved role; do not invent one |
+| Question novelty exhaustion | Return controlled `409`; expand/review anchors; no repeated static fallback |
+| Gemini/provider failure | Retry only within policy and return provider failure (`503`) |
+| Invalid structured output | Schema retry/validation; never parse arbitrary prose into a score |
+| Poor audio/transcript | Lower evidence confidence or request re-recording/follow-up |
+| No valid face frames | Continue with available modalities and mark visual evidence unavailable |
+| Missing approved resource | Report unresolved resource coverage; never invent a URL |
+| Model/checksum mismatch | Refuse inference; never return a placeholder signal |
+| Duplicate job delivery | Use idempotency and persisted job state |
+| Maximum retries reached | Record terminal failure and expose a safe status |
+| Deletion request | Cancel/stop eligible jobs, remove owned objects/records under policy, audit status |
+
+## 34. Research plan, risks, ownership, and definition of done
+
+### 34.1 Research questions
+
+1. Can frozen, source-grounded rubrics and an Evidence Graph make automated
+   mock-interview feedback auditable?
+2. Does hybrid RAG plus constrained dynamic generation provide relevant,
+   non-repetitive questions without changing assessment standards?
+3. How does full MAG-BERT compare with text-only and modality ablations, and do
+   ARL variants improve overall or difficult-subset performance?
+4. Do graph-supported, approved-resource roadmaps improve competency evidence
+   on a later reattempt?
+5. How closely do constrained Gemini criterion judgments agree with qualified
+   human evaluators?
+
+### 34.2 Human annotation protocol
+
+Qualified evaluators receive the same frozen question, rubric, expected
+concepts, and transcript evidence. They score criterion coverage, correctness,
+depth, completeness, communication structure, and evidence confidence. Record
+independent ratings before adjudication, calculate agreement, document
+disagreements, and calibrate formulas/thresholds only from consented evidence.
+
+### 34.3 Principal risks and controls
+
+| Risk | Control |
+|---|---|
+| Public data lacks technical labels | Use FI V2 only for the separate multimodal signal; collect consented rubric labels for readiness validation |
+| Question repetition from a small anchor pool | Expand reviewed anchors/scenarios, use cross-attempt history and bounded recovery, report exhaustion honestly |
+| Hallucinated questions or roadmaps | Approved retrieval corpus, frozen standards, schema/source validation, independent checks, ID allow-lists |
+| Arbitrary-looking scores | Publish formulas, thresholds, versions, evidence links, confidence, and insufficiency reasons |
+| Media/model bias | Keep sensitive attributes out of normal input, audit permitted subsets offline, use confidence gating and cautious claims |
+| OpenFace/Whisper failure | Quality flags, modality availability, retry/re-record path; never fabricate features |
+| Secret leakage | Backend/worker trust split, environment templates, private storage, RLS, secret scanning and no secrets in Git |
+| GPU or provider unavailable | Durable jobs, bounded retries, clear unavailable state; never substitute dummy results |
+| Overclaiming usefulness | Separate implementation, machine experiments, and pending human/public-pilot validation |
+
+### 34.4 Suggested team ownership
+
+- ML/research lead: FI V2 preprocessing contract, MAG/ARL experiments, metrics,
+  fairness/robustness audit, selected-model provenance, SHAP.
+- Multimodal lead: FFmpeg, Whisper, openSMILE, OpenFace, alignment, quality flags,
+  throughput and artifact reproducibility.
+- evidence/retrieval lead: roles, anchors, rubrics, sources, Gemini validation,
+  Evidence Graph, scoring, roadmap and human-evaluation protocol.
+- platform lead: frontend, FastAPI, Supabase, queues, private storage, RLS,
+  deployment, monitoring, privacy and E2E verification.
+
+Cross-review is mandatory for migrations, scoring changes, prompts/schemas,
+selected-model changes, privacy policy, and claims in the paper or presentation.
+
+### 34.5 Definition of done
+
+**Model:** fixed manifests and preprocessing versions reproduce aligned tensors;
+experiments have configs/seeds/history/checksums; the selected checkpoint passes
+load/inference and audit gates; SHAP traces to inputs.
+
+**Question system:** every core question is dynamically generated from an
+approved anchor, passes grounding and anti-repetition checks, and freezes its
+complete assessment package. Exhaustion and provider failure remain distinct.
+
+**Evidence and scoring:** every report claim traces to evidence; formulas and
+thresholds are versioned; low coverage/confidence suppresses Placement
+Readiness; delivery and multimodal signals remain non-decisive.
+
+**Roadmap:** every recommendation maps to a confirmed graph gap and an approved
+resource ID/URL; no live unrestricted search or invented resource is accepted.
+
+**Platform:** a student can authenticate, consent, select a role, optionally
+upload JD/resume, complete the six-competency interview, wait for private
+processing, view the evidence-backed report/roadmap, reattempt, compare progress,
+and request deletion. Ownership isolation and retries are verified.
+
+**Research/public pilot:** participant consent, faculty calibration, evaluator
+agreement, retrieval/recommendation evaluation, usability results, retention,
+and deletion execution are documented. Until these are complete, the software
+must be presented as an implemented student self-improvement research platform,
+not a validated hiring instrument.
+
+### 34.6 Paper/report structure
+
+1. Introduction and student placement-readiness problem.
+2. Related work: automated video interviews, MAG, ARL, RAG, explainability, and
+   evidence-backed learning systems.
+3. Dataset boundaries and multimodal reproduction.
+4. Proposed FairHireAI architecture, dynamic interview, Evidence Graph,
+   scorecard, roadmap, privacy, and trust boundaries.
+5. Experimental setup: data, preprocessing, anchors, evaluators, metrics,
+   ablations, retrieval tests, and usability protocol.
+6. Results separated into machine experiments and human/pilot evaluation.
+7. Discussion of validity, bias, privacy, failures, limitations, and non-goals.
+8. Conclusion and future domain/public-pilot extensions.
+
+## 35. Canonical references inside this repository
+
+- `../README.md`: concise project overview and setup entry point.
+- `Architecture Diagram.png`: current high-level system architecture.
+- `CLONE_AND_RUN.md`: local installation and startup.
+- `ml_pipeline_runbook.md`: preprocessing, training, evaluation, and model
+  artifact workflow.
+- `../deployment/PRODUCTION_RUNBOOK.md`: production topology and deployment
+  checks.
+- `sources.csv`: source registry, licences, attribution, and intended use.
+- `../configs/roles/`: role catalogue, competencies, weights, and primary role
+  template.
+- `../configs/fi_v2/selected_model.v1.json`: selected-model identity, metrics,
+  checksums, intended use, and deployment gate.
+- `../deployment/supabase/migrations/`: database, RLS, queue, privacy, and trusted
+  knowledge evolution.
+
+This guide intentionally describes the complete project, but code and versioned
+configuration remain authoritative for executable behavior. Update this file in
+the same change whenever a role, formula, prompt contract, model selection,
+migration, trust boundary, or public claim changes.
